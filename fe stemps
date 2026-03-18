@@ -1,0 +1,5 @@
+1.npm create vite@latest .
+
+2. auth routes create 
+    user ---reg--login
+    food partner reg--login

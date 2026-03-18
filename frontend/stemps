@@ -1,0 +1,5 @@
+npm i react-router-dom
+
+folder routes..appRoutes.jsx-----rfce
+
+create register and login page for the user and food partner use same css file in all four pages use css variables for centralize thene create variables in separate css file .i want  the ui design simple minimal and seamless with light and dark feature acc to system setting no  need to write the logics like on submit just create ui

@@ -1,0 +1,60 @@
+1.create server app.js
+        app.js me express instantiate krenge 
+
+2.start server server.js
+        connect db
+        requiring dotenv
+3.connect db db.js
+        db me logic likhenge
+        but function call in server.js
+4.model of user in model folder
+5.api routes in routes folder
+6. routes controllers in controllers folder
+7.express cannot read read data from body of request by default so we have to use MIDDLEWARE to read data from body of request
+        we have to use express.json() middleware to read data from body of request in json format
+        we have to use express.urlencoded() middleware to read data from body of request in urlencoded format
+        we have to use both middleware to read data from body of request
+        middlewares in app.js
+8. reg---- post req in routes --- handlerFunction in controller check if exist --if not hashPassword..then create user with hashPassword-- create token --stored in cookie --send response with userinfo
+     JWT => for authentication.     =>stored in cookies
+            used to securely verify a user's identity after login by sending a signed token with each request.
+            It enables stateless authentication, so the server doesn’t need to store session data for every user.
+            token secret key is mentioned in .env file ....accessed using process.env.JWT_SECTRET
+
+   login--- post req in routes --- handlerFunction in controller check if exist --if not compare bcrypt password..then create user with hashPassword-- create token --stored in cookie --send response with userinfo
+   logout---clear cookie token 
+   for user...food partner
+
+   export all handlers in object....import in routers
+   and import it in app.js and app.use('/api/auth', authRoutes) is used to mount a group of routes under a base URL so your APIs are organized and predictable for large scale.
+9. .env file ---secret key ,mongodb 
+10.foodRoutes ....only food partner can add
+11. create middleware folder for middlewares
+        auth.middleware--- check token exists ----verify token(jwt verify)---find fp from db ---then attaching retrieve info to req
+    in food routes
+            [protected route for food partners to add food items]=>middleware to ensure that only authorized food partners can access this route and perform the action of creating a food item, enhancing the security of the application by preventing unauthorized access to sensitive operations.
+            first authFoodPartnerMiddleware will check if the request has a valid token and if the food partner is authenticated, then it will allow the request to proceed (next()) to the createFood controller function which will handle the logic for creating a new food item in the database.
+            middleware is providing req.foodPartner which contains the authenticated food partner's information, allowing the createFood controller to access details about the food partner who is creating the food item, such as their ID or name, which can be useful for associating the food item with the correct food partner in the database.
+    adding video can be done by form-data 
+    front end se jo bhi aa rha h express cannot read anything by default thats why we use multer ...require..upload var..upload.single("frontend me video ka naame jo bhi h")
+    file req.body me nhi aati ...req.file me aati h
+    what is buffer in multer? A buffer in multer refers to a temporary storage area in memory where uploaded files are stored before they are processed or saved to a permanent location. When you configure multer to use memoryStorage, the uploaded file is stored as a buffer in memory, allowing you to access the file data directly in your controller without needing to save it to disk first. This can be useful for scenarios where you want to process the file (e.g., upload it to a cloud storage service) before saving any relevant information to the database, or when you want to avoid the overhead of writing files to disk on the server.
+    ab server pe upload hogya ..not storing in server (server k case me either in harddisk or ssd) ...now at production level storing at cloud ....using imagekit
+12.creating services folder with storage.services.js file
+
+we use when u want to create large application where quality is important. for that we want 
+=>dow file (all the interaction between database and server is through this )
+=>validation layer (for data validation)
+
+
+npm init -y
+npm i express
+npm i nodemon 
+npm i mongoose
+npm i bcryptjs =>for hashing password
+npm i jsonwebtoken =>creating token 
+npm i cookie-parser => cookies me token store krne k liye =>used as middleware in app.js
+npm i dotenv =>for enabling .env features
+npm i multer =>multer is a middleware for handling multipart/form-data, which is primarily used for uploading files. In the context of our food delivery application, we can use multer to handle the uploading of food images by food partners when they create new food items. This allows us to easily manage and store the images associated with each food item in our database or file storage system.
+npm install @imagekit/nodejs
+npm i uuid 
