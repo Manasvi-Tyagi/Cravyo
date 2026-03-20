@@ -1,6 +1,6 @@
 const express=require('express');
 const router=express.Router();
-const {createFood,getFoodItems}=require('../controllers/food.controller');
+const {createFood,getFoodItems,likefood,savefood}=require('../controllers/food.controller');
 const {authFoodPartnerMiddleware, authCustomerMiddleware}=require('../middlewares/auth.middleware');
 const multer=require('multer');
 const upload=multer({storage: multer.memoryStorage(),limits: { fileSize: 50 * 1024 * 1024 }})//multer middleware to handle file uploads, specifying the destination folder for uploaded files as 'uploads/'.
@@ -17,10 +17,12 @@ router.post('/',
 
 //get /api/food => to get all food items (for customers to view and order from)
 router.get('/',authCustomerMiddleware,getFoodItems)
-//get /api/food/:id => to get details of a specific food item (for customers to view and order from)
+//get /api/food/food-partner/:id => to get details of a specific food item (for customers to view and order from)
+
 //put /api/food/:id => to update details of a specific food item (for food partners to manage their food items)
 //delete /api/food/:id => to delete a specific food item (for food partners to manage their food items)
 
-
+router.post('/like',authCustomerMiddleware,likefood);
+router.post('/save',authCustomerMiddleware,savefood);
 
 module.exports=router;

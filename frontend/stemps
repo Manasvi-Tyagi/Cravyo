@@ -3,3 +3,12 @@ npm i react-router-dom
 folder routes..appRoutes.jsx-----rfce
 
 create register and login page for the user and food partner use same css file in all four pages use css variables for centralize thene create variables in separate css file .i want  the ui design simple minimal and seamless with light and dark feature acc to system setting no  need to write the logics like on submit just create ui
+
+npm i axios for requesting post api from frontend data
+
+npm i cors-----Frontend calls backend → browser blocks → CORS allows it
+
+
+in the home page we have ui like reels like instagram/tiktok where user can scroll videos and the videos will cover the entire screen one video at a time ,thier will be snapping feature for scolling video so that each cover the entire screen
+
+there will be a button at each video 'visit store' and des above the button the description is truncated so that it doesnot take more that two lines in ui the button and description are both top of the video

@@ -35,14 +35,14 @@ function logoutUser(req,res){
     res.status(200).json({message:"User logged out successfully"});
 }
 async function registerFoodPartner(req,res){
-    const {name,email,password} = req.body;
+    const {name,contactName,phone,address,email,password} = req.body;
     const ifFoodPartnerExist = await FoodPartnerModel.findOne({email});
 
     if(ifFoodPartnerExist){
         return res.status(400).json({message:"Food Partner already exist"});
     }
     const hashedPassword=await bcrypt.hash(password,10);//hashing password with bcrypt important for security in case of data breach
-    const FoodPartner =await FoodPartnerModel.create({name,email,password:hashedPassword});
+    const FoodPartner =await FoodPartnerModel.create({name,contactName,phone,address,email,password:hashedPassword});
 
     const token = jwt.sign({id:FoodPartner._id},process.env.JWT_SECRET);//creating token with FoodPartner id and secret key 
     res.cookie('token',token)
