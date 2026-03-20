@@ -60,22 +60,66 @@ A modern food ordering platform inspired by Instagram Reels, where users discove
 ---
 
 ## 📁 Project Structure
+## 📁 Project Structure
 
-frontend/
-src/
-pages/
-auth/
-food-partner/
-general/
-styles/
+```
+cravyo/
+│
+├── backend/
+│   ├── src/
+│   │   ├── controllers/
+│   │   │   ├── food.controller.js
+│   │   │   ├── food-partner.controller.js
+│   │   │
+│   │   ├── models/
+│   │   │   ├── food.model.js
+│   │   │   ├── foodPartner.model.js
+│   │   │   ├── likes.model.js
+│   │   │   ├── save.model.js
+│   │   │
+│   │   ├── routes/
+│   │   │   ├── food.routes.js
+│   │   │   ├── food-partner.routes.js
+│   │   │
+│   │   ├── middlewares/
+│   │   │   ├── auth.middleware.js
+│   │   │
+│   │   ├── services/
+│   │   │   ├── storage.services.js
+│   │   │
+│   │   ├── app.js
+│   │
+│   ├── server.js
+│   ├── .env
+│   ├── package.json
+│
+├── frontend/
+│   ├── src/
+│   │   ├── pages/
+│   │   │   ├── auth/
+│   │   │   │   ├── FoodPartnerLogin.jsx
+│   │   │   │   ├── FoodPartnerRegister.jsx
+│   │   │   │   ├── UserLogin.jsx
+│   │   │   │   ├── UserRegister.jsx
+│   │   │   │
+│   │   │   ├── food-partner/
+│   │   │   │   ├── CreateFood.jsx
+│   │   │   │   ├── Profile.jsx
+│   │   │   │
+│   │   │   ├── general/
+│   │   │   │   ├── Home.jsx
+│   │   │
+│   │   ├── styles/
+│   │   │   ├── create-food.css
+│   │   │
+│   │   ├── App.jsx
+│   │   ├── main.jsx
+│   │
+│   ├── package.json
+│
+├── README.md
+```
 
-backend/
-src/
-controllers/
-models/
-routes/
-middlewares/
-services/
 
 ---
 
