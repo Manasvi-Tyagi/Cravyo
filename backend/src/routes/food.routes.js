@@ -1,6 +1,6 @@
 const express=require('express');
 const router=express.Router();
-const {createFood,getFoodItems}=require('../controllers/food.controller');
+const {createFood,getFoodItems,likefood,savefood,getLikedFoods,getSavedFoods,addComment,getComments,deleteComment,editComment,likeComment}=require('../controllers/food.controller');
 const {authFoodPartnerMiddleware, authCustomerMiddleware}=require('../middlewares/auth.middleware');
 const multer=require('multer');
 const upload=multer({storage: multer.memoryStorage(),limits: { fileSize: 50 * 1024 * 1024 }})//multer middleware to handle file uploads, specifying the destination folder for uploaded files as 'uploads/'.
@@ -15,12 +15,20 @@ router.post('/',
     createFood)
 //why upload.single('videos')? because we are expecting a single file upload with the field name 'videos' in the incoming request. This middleware will handle the file upload process, allowing us to access the uploaded file's data in our controller through req.file, which is essential for processing the file (e.g., uploading it to a cloud storage service) before saving any relevant information to the database.
 
-//get /api/food => to get all food items (for customers to view and order from)
-router.get('/',authCustomerMiddleware,getFoodItems)
-//get /api/food/:id => to get details of a specific food item (for customers to view and order from)
+//get /api/food => public feed (customers, food partners, guests); like/save/comment routes stay customer-only
+router.get('/', getFoodItems)
+//get /api/food/food-partner/:id => to get details of a specific food item (for customers to view and order from)
+
 //put /api/food/:id => to update details of a specific food item (for food partners to manage their food items)
 //delete /api/food/:id => to delete a specific food item (for food partners to manage their food items)
 
-
-
+router.post('/like',authCustomerMiddleware,likefood);
+router.post('/save',authCustomerMiddleware,savefood);
+router.get('/liked',authCustomerMiddleware,getLikedFoods);
+router.get('/saved',authCustomerMiddleware,getSavedFoods);
+router.post('/comments',authCustomerMiddleware,addComment);
+router.get('/comments/:foodId',authCustomerMiddleware,getComments);
+router.put('/comment/:commentId', authCustomerMiddleware, editComment);
+router.delete("/comment/:commentId", authCustomerMiddleware, deleteComment);
+router.post('/comments/like', authCustomerMiddleware, likeComment);
 module.exports=router;
