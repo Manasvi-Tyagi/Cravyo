@@ -1,32 +1,30 @@
 import React, { useState } from 'react';
 import '../../styles/create-food.css';
-import axios from 'axios';
+import api from '../../api/axios';
 import { useNavigate } from 'react-router-dom';
+import FoodPartnerBottomNav, {
+  FOOD_PARTNER_ID_KEY,
+} from '../../components/FoodPartnerBottomNav';
 
 const CreateFood = () => {
   const [foodName, setFoodName] = useState('');
   const [videoFile, setVideoFile] = useState(null);
   const [videoUrl, setVideoUrl] = useState(null);
   const [description, setDescription] = useState('');
+  const [price, setPrice] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [showVideoModal, setShowVideoModal] = useState(false);
 
   const navigate=useNavigate();
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle form submission
-    console.log('Food Name:', foodName);
-    console.log('Video File:', videoFile);
-    console.log('Description:', description);
-    // Here you would typically send to backend
     const formData=new FormData();
-    formData.append('name',foodName)
-    formData.append('description',description)
-    formData.append('videos',videoFile)
-    const response=await axios.post("http://localhost:1234/api/food/",formData,{withCredentials:true})
-    console.log(response.data)
-    navigate('/')
-
+    formData.append('name', foodName)
+    formData.append('description', description)
+    formData.append('price', price)
+    formData.append('video', videoFile)
+    await api.post('/api/product/create', formData)
+    navigate(localStorage.getItem(FOOD_PARTNER_ID_KEY) ? '/food-partner/home' : '/')
   };
 
   const handleFileChange = (e) => {
@@ -66,7 +64,8 @@ const CreateFood = () => {
   }, [videoUrl]);
 
   return (
-    <div className="create-food-shell">
+    <>
+    <div className="create-food-shell create-food-shell--with-partner-nav">
       <div className="create-food-card">
         <h1 className="create-food-head">Create New Food Item</h1>
         <p className="create-food-sub">Share your delicious creation with the world</p>
@@ -85,6 +84,20 @@ const CreateFood = () => {
               value={foodName}
               onChange={(e) => setFoodName(e.target.value)}
               placeholder="Enter food name"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="price">Price (₹)</label>
+            <input
+              type="number"
+              id="price"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="Enter price"
+              min="0"
+              step="0.01"
               required
             />
           </div>
@@ -151,7 +164,7 @@ const CreateFood = () => {
             />
           </div>
 
-          <button type="submit" className="submit-btn" disabled={!foodName || !videoFile || !description}>
+          <button type="submit" className="submit-btn" disabled={!foodName || !videoFile || !description || !price}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 2L13.09 8.26L19 9L13.09 9.74L12 16L10.91 9.74L5 9L10.91 8.26L12 2Z" fill="currentColor"/>
             </svg>
@@ -186,6 +199,8 @@ const CreateFood = () => {
         )}
       </div>
     </div>
+    <FoodPartnerBottomNav />
+    </>
   );
 };
 

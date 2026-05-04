@@ -1,16 +1,28 @@
 import { Link ,useNavigate} from 'react-router-dom'
-import axios from 'axios'
+import { useState } from 'react'
+import api from '../../api/axios'
+import { FOOD_PARTNER_ID_KEY } from '../../components/FoodPartnerBottomNav'
 
 export default function FoodPartnerLogin() {
   const navigate = useNavigate();
+  const [error, setError] = useState('')
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('')
     const email= e.target.email.value;
     const password= e.target.password.value;
-    //console.log(email, password);
-            const response = await axios.post('http://localhost:1234/api/auth/food-partner/login', { email, password },{withCredentials: true});//withCredentials to store  cookies cookies are used to maintain user sessions and authentication states across different requests. By including this option, the client can send cookies along with the request, allowing the server to recognize the user and maintain their session. This is particularly important for authentication purposes, as it enables the server to identify the user and provide access to protected resources based on their session information.
-        //console.log(response.data);
-        navigate('/create-food');}
+    try {
+      const res = await api.post('/api/auth/merchant/login', { email, password });
+      const merchant = res.data?.data
+      if (merchant?.id != null) {
+        localStorage.setItem(FOOD_PARTNER_ID_KEY, String(merchant.id))
+      }
+      navigate('/food-partner/home', { replace: true });
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Login failed. Is the API running?'
+      setError(msg)
+    }
+  }
   return (
     <div className="auth-shell">
       <div className="auth-card">
@@ -31,6 +43,7 @@ export default function FoodPartnerLogin() {
             <input name="password" type="password" placeholder="Your password" />
           </div>
           <button type="submit">Login</button>
+          {error ? <p className="small-note" role="alert" style={{ color: '#f87171' }}>{error}</p> : null}
           <p className="small-note">
             New partner? <Link to="/food-partner/register">Register</Link>
           </p>

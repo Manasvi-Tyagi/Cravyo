@@ -1,68 +1,148 @@
 const UserModel = require('../models/user.model');
-const FoodPartnerModel = require('../models/foodPartner.model');
+const MerchantModel = require('../models/merchant.model');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const config = require('../config');
+const asyncHandler = require('../utils/asyncHandler');
+const ApiError = require('../utils/ApiError');
+const ApiResponse = require('../utils/ApiResponse');
 
-async function registerUser(req,res){
-    const {name,email,password} = req.body;
-    const ifUserExist = await UserModel.findOne({email});
+const COOKIE_OPTS = {
+  httpOnly: true,
+  secure: config.nodeEnv === 'production',
+  sameSite: 'lax',   // 'strict' blocks cross-port localhost (5173→1234)
+};
 
-    if(ifUserExist){
-        return res.status(400).json({message:"User already exist"});
-    }
-    const hashedPassword=await bcrypt.hash(password,10);//hashing password with bcrypt important for security in case of data breach
-    const user =await UserModel.create({name,email,password:hashedPassword});
-
-    const token = jwt.sign({id:user._id},process.env.JWT_SECRET);//creating token with user id and secret key 
-    res.cookie('token',token)
-    res.status(201).json({message:"User registered successfully",user:{id:user._id,name:user.name,email:user.email}});
+function issueTokens(payload) {
+  const accessToken = jwt.sign(payload, config.jwtAccessSecret, { expiresIn: config.jwtAccessExpiry });
+  const refreshToken = jwt.sign(payload, config.jwtRefreshSecret, { expiresIn: config.jwtRefreshExpiry });
+  return { accessToken, refreshToken };
 }
-async function loginUser(req,res){
-    const {email,password}=req.body;
 
-    const user = await UserModel.findOne({email});
-    if(!user){res.status(400).json({message:"Invalid email or password"});}
-    
-    const isPasswordValid = await bcrypt.compare(password,user.password);
-    if(!isPasswordValid){res.status(400).json({message:"Invalid email or password"});} //why bcrypt.compare
-
-    const token = jwt.sign({id:user._id},process.env.JWT_SECRET);//creating token with user id and secret key from env file for security
-    res.cookie('token',token);
-    res.status(200).json({message:"User logged in successfully",user:{id:user._id,name:user.name,email:user.email}});
+function setAuthCookies(res, accessToken, refreshToken) {
+  res.cookie('access_token', accessToken, { ...COOKIE_OPTS, maxAge: 15 * 60 * 1000 });
+  res.cookie('refresh_token', refreshToken, { ...COOKIE_OPTS, maxAge: 7 * 24 * 60 * 60 * 1000 });
+  // Legacy cookie kept for backward compat with old frontend code
+  res.cookie('token', accessToken, { ...COOKIE_OPTS, maxAge: 15 * 60 * 1000 });
 }
-function logoutUser(req,res){
-    res.clearCookie('token');
-    res.status(200).json({message:"User logged out successfully"});
-}
-async function registerFoodPartner(req,res){
-    const {name,contactName,phone,address,email,password} = req.body;
-    const ifFoodPartnerExist = await FoodPartnerModel.findOne({email});
 
-    if(ifFoodPartnerExist){
-        return res.status(400).json({message:"Food Partner already exist"});
-    }
-    const hashedPassword=await bcrypt.hash(password,10);//hashing password with bcrypt important for security in case of data breach
-    const FoodPartner =await FoodPartnerModel.create({name,contactName,phone,address,email,password:hashedPassword});
+// ── CUSTOMER ──────────────────────────────────────────────────────────────────
 
-    const token = jwt.sign({id:FoodPartner._id},process.env.JWT_SECRET);//creating token with FoodPartner id and secret key 
-    res.cookie('token',token)
-    res.status(201).json({message:"Food Partner registered successfully",FoodPartner:{id:FoodPartner._id,name:FoodPartner.name,email:FoodPartner.email}});
-}
-async function loginFoodPartner(req,res){
-    const {email,password}=req.body;
+const registerUser = asyncHandler(async (req, res) => {
+  const { name, email, password } = req.body;
+  if (!name || !email || !password) throw new ApiError(400, "name, email and password are required");
 
-    const FoodPartner = await FoodPartnerModel.findOne({email});
-    if(!FoodPartner){res.status(400).json({message:"Invalid email or password"});}
-    
-    const isPasswordValid = await bcrypt.compare(password,FoodPartner.password);
-    if(!isPasswordValid){res.status(400).json({message:"Invalid email or password"});} //why bcrypt.compare
+  if (await UserModel.findOne({ email })) throw new ApiError(409, "User already exists");
 
-    const token = jwt.sign({id:FoodPartner._id},process.env.JWT_SECRET);//creating token with FoodPartner id and secret key from env file for security
-    res.cookie('token',token);
-    res.status(200).json({message:"FoodPartner logged in successfully",FoodPartner:{id:FoodPartner._id,name:FoodPartner.name,email:FoodPartner.email}});
-}
-function logoutFoodPartner(req,res){
-    res.clearCookie('token');
-    res.status(200).json({message:"FoodPartner logged out successfully"});
-}
-module.exports={registerUser,loginUser,logoutUser,registerFoodPartner,loginFoodPartner,logoutFoodPartner};
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const user = await UserModel.create({ name, email, password: hashedPassword });
+
+  const { accessToken, refreshToken } = issueTokens({ id: user._id, role: 'customer' });
+  setAuthCookies(res, accessToken, refreshToken);
+
+  res.status(201).json(new ApiResponse(201, { id: user._id, name: user.name, email: user.email }, "User registered successfully"));
+});
+
+const loginUser = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) throw new ApiError(400, "email and password are required");
+
+  const user = await UserModel.findOne({ email });
+  if (!user || !(await bcrypt.compare(password, user.password))) {
+    throw new ApiError(401, "Invalid email or password");
+  }
+
+  const { accessToken, refreshToken } = issueTokens({ id: user._id, role: 'customer' });
+  setAuthCookies(res, accessToken, refreshToken);
+
+  res.status(200).json(new ApiResponse(200, { id: user._id, name: user.name, email: user.email }, "Logged in successfully"));
+});
+
+const logoutUser = asyncHandler(async (req, res) => {
+  res.clearCookie('access_token');
+  res.clearCookie('refresh_token');
+  res.clearCookie('token');
+  res.status(200).json(new ApiResponse(200, null, "Logged out successfully"));
+});
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+  const user = req.customer;
+  if (!user) throw new ApiError(401, "Not authenticated");
+  res.status(200).json(new ApiResponse(200, { id: user._id, name: user.name, email: user.email }));
+});
+
+// ── MERCHANT ──────────────────────────────────────────────────────────────────
+
+const registerMerchant = asyncHandler(async (req, res) => {
+  const { name, restaurantName, phone, address, email, password } = req.body;
+  if (!name || !email || !password) throw new ApiError(400, "name, email and password are required");
+
+  if (await MerchantModel.findOne({ email })) throw new ApiError(409, "Merchant already exists");
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const merchant = await MerchantModel.create({ name, restaurantName, phone, address, email, password: hashedPassword });
+
+  const { accessToken, refreshToken } = issueTokens({ id: merchant._id, role: 'merchant' });
+  setAuthCookies(res, accessToken, refreshToken);
+
+  res.status(201).json(new ApiResponse(201, { id: merchant._id, name: merchant.name, email: merchant.email }, "Merchant registered successfully"));
+});
+
+const loginMerchant = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) throw new ApiError(400, "email and password are required");
+
+  const merchant = await MerchantModel.findOne({ email });
+  if (!merchant || !(await bcrypt.compare(password, merchant.password))) {
+    throw new ApiError(401, "Invalid email or password");
+  }
+
+  const { accessToken, refreshToken } = issueTokens({ id: merchant._id, role: 'merchant' });
+  setAuthCookies(res, accessToken, refreshToken);
+
+  res.status(200).json(new ApiResponse(200, { id: merchant._id, name: merchant.name, email: merchant.email, restaurantName: merchant.restaurantName }, "Logged in successfully"));
+});
+
+const logoutMerchant = asyncHandler(async (req, res) => {
+  res.clearCookie('access_token');
+  res.clearCookie('refresh_token');
+  res.clearCookie('token');
+  res.status(200).json(new ApiResponse(200, null, "Logged out successfully"));
+});
+
+const getCurrentMerchant = asyncHandler(async (req, res) => {
+  const merchant = req.merchant;
+  if (!merchant) throw new ApiError(401, "Not authenticated");
+  res.status(200).json(new ApiResponse(200, { id: merchant._id, name: merchant.name, email: merchant.email, restaurantName: merchant.restaurantName, image: merchant.image }));
+});
+
+// ── REFRESH TOKEN ─────────────────────────────────────────────────────────────
+
+const refreshAccessToken = asyncHandler(async (req, res) => {
+  const incomingRefresh = req.cookies.refresh_token;
+  if (!incomingRefresh) throw new ApiError(401, "No refresh token");
+
+  let decoded;
+  try {
+    decoded = jwt.verify(incomingRefresh, config.jwtRefreshSecret);
+  } catch {
+    throw new ApiError(401, "Invalid or expired refresh token");
+  }
+
+  const { accessToken, refreshToken } = issueTokens({ id: decoded.id, role: decoded.role });
+  setAuthCookies(res, accessToken, refreshToken);
+  res.status(200).json(new ApiResponse(200, null, "Token refreshed"));
+});
+
+// ── BACKWARD COMPAT ALIASES ───────────────────────────────────────────────────
+const registerFoodPartner = registerMerchant;
+const loginFoodPartner = loginMerchant;
+const logoutFoodPartner = logoutMerchant;
+const getCurrentFoodPartner = getCurrentMerchant;
+
+module.exports = {
+  registerUser, loginUser, logoutUser, getCurrentUser,
+  registerMerchant, loginMerchant, logoutMerchant, getCurrentMerchant,
+  registerFoodPartner, loginFoodPartner, logoutFoodPartner, getCurrentFoodPartner,
+  refreshAccessToken,
+};

@@ -9,6 +9,10 @@
   align-items: center;
 }
 
+.create-food-shell.create-food-shell--with-partner-nav {
+  padding-bottom: calc(var(--bottom-nav-height) + 1rem + env(safe-area-inset-bottom, 0px));
+}
+
 .create-food-card {
   width: min(100%, 480px);
   border-radius: var(--radius);

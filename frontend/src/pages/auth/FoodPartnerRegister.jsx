@@ -1,23 +1,23 @@
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../api/axios";
+import { FOOD_PARTNER_ID_KEY } from "../../components/FoodPartnerBottomNav";
+
 export default function FoodPartnerRegister() {
   const navigate = useNavigate();
   const handleSubmit = async (e) => {
     e.preventDefault();
     const name = e.target.name.value;
-    const contactName = e.target.contactName.value;
+    const restaurantName = e.target.restaurantName.value;
     const address = e.target.address.value;
     const email = e.target.email.value;
     const phone = e.target.phone.value;
     const password = e.target.password.value;
-    console.log(name, contactName, address, email, phone, password);
-    const response = await axios.post(
-      "http://localhost:1234/api/auth/food-partner/register",
-      { name, contactName, address, email, phone, password },
-      { withCredentials: true },
-    ); //withCredentials to store  cookies cookies are used to maintain user sessions and authentication states across different requests. By including this option, the client can send cookies along with the request, allowing the server to recognize the user and maintain their session. This is particularly important for authentication purposes, as it enables the server to identify the user and provide access to protected resources based on their session information.
-    console.log(response.data);
-    navigate("/create-food");
+    const response = await api.post("/api/auth/merchant/register", { name, restaurantName, address, email, phone, password });
+    const merchant = response.data?.data;
+    if (merchant?.id != null) {
+      localStorage.setItem(FOOD_PARTNER_ID_KEY, String(merchant.id));
+    }
+    navigate("/food-partner/home");
   };
   return (
     <div className="auth-shell">
@@ -33,12 +33,12 @@ export default function FoodPartnerRegister() {
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Kitchen / Restaurant Name</label>
-            <input name="name" placeholder="Your kitchen name" />
+            <label>Restaurant / Kitchen Name</label>
+            <input name="restaurantName" placeholder="Your restaurant name" />
           </div>
           <div className="form-group">
-            <label>Contact Name</label>
-            <input name="contactName" placeholder="Contact person name" />
+            <label>Owner Name</label>
+            <input name="name" placeholder="Your name" />
           </div>
           <div className="form-group">
             <label>Address</label>

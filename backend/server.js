@@ -1,10 +1,10 @@
-require('dotenv').config();//to load environment variables from .env file into process.env, which is essential for keeping sensitive information like JWT secrets out of the source code and allowing for different configurations in development and production environments.
+require('dotenv').config();
 
-//start server //db conected here
 const app = require('./src/app');
 const connectDB = require('./src/db/db');
+const config = require('./src/config');
 
 connectDB();
-app.listen(1234,()=>{
-    console.log("server is running at port 1234");
+app.listen(config.port, () => {
+    console.log(`Server running on port ${config.port}`);
 });
