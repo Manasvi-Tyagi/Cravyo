@@ -1,7 +1,7 @@
 import React from "react";
 import { useParams } from "react-router-dom";
 import api from "../../api/axios";
-import FoodPartnerBottomNav from "../../components/FoodPartnerBottomNav";
+import FoodPartnerBottomNav, { FOOD_PARTNER_ID_KEY } from "../../components/FoodPartnerBottomNav";
 
 const Profile = () => {
   const { id } = useParams();
@@ -9,24 +9,35 @@ const Profile = () => {
   const [profileData, setProfileData] = React.useState(null);
   const [videoPosts, setVideoPosts] = React.useState([]);
 
-    React.useEffect(() => {
-        api.get(`/api/merchant/${id}`)
-            .then((response) => {
-                const data = response.data.data;
-                setProfileData(data.merchant);
-                setVideoPosts(data.products || []);
-            });
-    }, [id]);
+  React.useEffect(() => {
+    api.get(`/api/merchant/${id}`)
+      .then((response) => {
+        const data = response.data.data;
+        setProfileData(data.merchant);
+        setVideoPosts(data.products || []);
+      });
+  }, [id]);
 
   React.useEffect(() => {
-    api
-      .get("/api/auth/merchant/me")
-      .then((res) => {
-        const merchantData = res.data.data;
-        const same = String(merchantData?.id) === String(id);
-        setPartnerOwnProfile(same);
-      })
-      .catch(() => setPartnerOwnProfile(false));
+    // Only check merchant ownership if the viewer has a merchant session in localStorage.
+    // Avoids a noisy 401 when a regular customer views the store page.
+    const storedMerchantId = localStorage.getItem(FOOD_PARTNER_ID_KEY);
+    if (!storedMerchantId) {
+      setPartnerOwnProfile(false);
+      return;
+    }
+    // Quick local check first — avoids network call in most cases
+    if (String(storedMerchantId) === String(id)) {
+      // Verify with server to confirm session is still valid
+      api.get("/api/auth/merchant/me")
+        .then((res) => {
+          const same = String(res.data.data?.id) === String(id);
+          setPartnerOwnProfile(same);
+        })
+        .catch(() => setPartnerOwnProfile(false));
+    } else {
+      setPartnerOwnProfile(false);
+    }
   }, [id]);
 
   return (
