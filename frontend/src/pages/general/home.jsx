@@ -3,30 +3,6 @@ import api from '../../api/axios'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import CommentsModal from '../../components/CommentsModal'
 
-// const reels = [
-//   {
-//     id: 1,
-//     title: 'Spicy Tikka Drop',
-//     description: 'Fresh tikka wraps with house chutney and crunchy onions. Limited time special for today only.',
-//     url: 'https://ik.imagekit.io/mnsv7/f96ca4c8-eba3-45d5-9346-e0a9749290ce-12888314_1080_1920_30fps_QwTE1CvS6.mp4',
-//     store: '/food-partner/login',
-//   },
-//   {
-//     id: 2,
-//     title: 'Sizzling Paneer Bowl',
-//     description: 'Creamy paneer, peppers, and spicy drizzle served hot. Perfect for quick dinners and weekend cravings.',
-//     url: 'https://ik.imagekit.io/mnsv7/f96ca4c8-eba3-45d5-9346-e0a9749290ce-12888314_1080_1920_30fps_QwTE1CvS6.mp4',
-//     store: '/food-partner/login',
-//   },
-//   {
-//     id: 3,
-//     title: 'Mango Shake Joy',
-//     description: 'Chilled mango shake with fresh fruit and aromatic cardamom. A cool treat after a busy day.',
-//     url: 'https://ik.imagekit.io/mnsv7/f96ca4c8-eba3-45d5-9346-e0a9749290ce-12888314_1080_1920_30fps_QwTE1CvS6.mp4',
-//     store: '/food-partner/login',
-//   },
-// ]
-
 const LS_KEYS = {
   saved: 'savedFoodIds',
   liked: 'likedFoodIds',
@@ -55,9 +31,10 @@ function HomeGlyph({ active }) {
     <svg className="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10.5Z"
-        stroke={active ? '#60a5fa' : 'currentColor'}
+        stroke={active ? '#FF6B35' : 'currentColor'}
         strokeWidth="1.8"
         strokeLinejoin="round"
+        fill={active ? 'rgba(255,107,53,0.15)' : 'none'}
       />
     </svg>
   )
@@ -68,9 +45,10 @@ function SavedGlyph({ active }) {
     <svg className="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M6 4h12a1 1 0 0 1 1 1v16l-7-4-7 4V5a1 1 0 0 1 1-1Z"
-        stroke={active ? '#60a5fa' : 'currentColor'}
+        stroke={active ? '#FF6B35' : 'currentColor'}
         strokeWidth="1.8"
         strokeLinejoin="round"
+        fill={active ? 'rgba(255,107,53,0.15)' : 'none'}
       />
     </svg>
   )
@@ -124,21 +102,21 @@ function BookmarkIcon({ filled }) {
   )
 }
 
-function ProfileGlyph() {
+function ProfileGlyph({ active }) {
   return (
     <svg className="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <circle cx="12" cy="8" r="4" stroke={active ? '#FF6B35' : 'currentColor'} strokeWidth="1.8" />
+      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke={active ? '#FF6B35' : 'currentColor'} strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   )
 }
 
-function CartGlyph() {
+function CartGlyph({ active }) {
   return (
     <svg className="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
-      <line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-      <path d="M16 10a4 4 0 01-8 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke={active ? '#FF6B35' : 'currentColor'} strokeWidth="1.8" strokeLinejoin="round"/>
+      <line x1="3" y1="6" x2="21" y2="6" stroke={active ? '#FF6B35' : 'currentColor'} strokeWidth="1.8" strokeLinecap="round"/>
+      <path d="M16 10a4 4 0 01-8 0" stroke={active ? '#FF6B35' : 'currentColor'} strokeWidth="1.8" strokeLinecap="round"/>
     </svg>
   )
 }
@@ -148,6 +126,7 @@ function BottomNav() {
   const homeActive = location.pathname === '/'
   const savedActive = location.pathname.startsWith('/saved')
   const cartActive = location.pathname.startsWith('/cart')
+  const profileActive = location.pathname.startsWith('/user')
 
   return (
     <nav className="bottom-nav" aria-label="Bottom navigation">
@@ -162,12 +141,12 @@ function BottomNav() {
       </NavLink>
 
       <NavLink to="/cart" className={cartActive ? 'bottom-nav-link active' : 'bottom-nav-link'}>
-        <CartGlyph />
+        <CartGlyph active={cartActive} />
         <span className="bottom-nav-label">cart</span>
       </NavLink>
 
-      <NavLink to="/user/login" className="bottom-nav-link">
-        <ProfileGlyph />
+      <NavLink to="/user/login" className={profileActive ? 'bottom-nav-link active' : 'bottom-nav-link'}>
+        <ProfileGlyph active={profileActive} />
         <span className="bottom-nav-label">login</span>
       </NavLink>
     </nav>
@@ -175,35 +154,32 @@ function BottomNav() {
 }
 
 const Home = () => {
-  const [videos, setVideos] = React.useState([]);
+  const [videos, setVideos] = React.useState([])
   const [savedIds, setSavedIds] = React.useState(() => safeLoadIdSet(LS_KEYS.saved))
   const [likedIds, setLikedIds] = React.useState(() => safeLoadIdSet(LS_KEYS.liked))
-  const videoRefs = React.useRef(new Map());
+  const [cartAddedIds, setCartAddedIds] = React.useState(new Set())
+  const [heartBeatId, setHeartBeatId] = React.useState(null)
+  const videoRefs = React.useRef(new Map())
   const [isCommentsOpen, setIsCommentsOpen] = React.useState(false)
   const [selectedReelId, setSelectedReelId] = React.useState(null)
-  
+
   React.useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           const video = entry.target
           if (video) {
-            if (entry.isIntersecting) {
-              video.play();
-            } else {
-              video.pause();
-            }
+            if (entry.isIntersecting) video.play()
+            else video.pause()
           }
-        });
+        })
       },
       { threshold: 0.5 }
-    );
+    )
     const observedVideos = Array.from(videoRefs.current.values())
     observedVideos.forEach((video) => observer.observe(video))
-    return () => {
-      observedVideos.forEach((video) => observer.unobserve(video))
-    }
-  }, [videos]);
+    return () => { observedVideos.forEach((video) => observer.unobserve(video)) }
+  }, [videos])
 
 
   const setVideoRef = (id) => (el) => {
@@ -264,6 +240,11 @@ const Home = () => {
       )
     )
 
+    if (!alreadyLiked) {
+      setHeartBeatId(foodId)
+      setTimeout(() => setHeartBeatId(null), 500)
+    }
+
     try {
       await api.post('/api/product/like', { productId: foodId })
     } catch (e) {
@@ -274,7 +255,7 @@ const Home = () => {
     }
   }
 
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   const toggleSave = async (foodId) => {
     const prevSaved = new Set(savedIds)
@@ -305,6 +286,22 @@ const Home = () => {
     }
   }
 
+  const addToCart = async (productId) => {
+    try {
+      await api.post('/api/cart/add', { productId, quantity: 1 })
+      setCartAddedIds((prev) => new Set([...prev, productId]))
+      setTimeout(() => {
+        setCartAddedIds((prev) => {
+          const next = new Set(prev)
+          next.delete(productId)
+          return next
+        })
+      }, 2500)
+    } catch (e) {
+      console.error('Add to cart failed', e)
+    }
+  }
+
   return (
     <div className="reels-shell">
       <div className="reels-list">
@@ -323,20 +320,24 @@ const Home = () => {
             <div className="reel-actions" aria-label="Reel actions">
               <div className="action-stack">
                 <button
-                  className={likedIds.has(reel._id) ? 'action-btn active' : 'action-btn'}
+                  className={[
+                    'action-btn',
+                    likedIds.has(reel._id) ? 'active like-active' : '',
+                    heartBeatId === reel._id ? 'heart-beat' : '',
+                  ].filter(Boolean).join(' ')}
                   onClick={() => toggleLike(reel._id)}
                   aria-label="Like"
                   type="button"
                 >
                   <HeartIcon filled={likedIds.has(reel._id)} />
                 </button>
-                <div className="action-count">Likes: {reel.likeCount ?? 0}</div>
+                <div className="action-count">{reel.likeCount ?? 0}</div>
               </div>
 
               <div className="action-stack">
-                <button 
-                  className="action-btn" 
-                  type="button" 
+                <button
+                  className="action-btn"
+                  type="button"
                   aria-label="Comment"
                   onClick={() => {
                     setSelectedReelId(reel._id)
@@ -345,40 +346,53 @@ const Home = () => {
                 >
                   <CommentIcon />
                 </button>
-                <div className="action-count">Comment: {reel.commentCount ?? 0}</div>
+                <div className="action-count">{reel.commentCount ?? 0}</div>
               </div>
 
               <div className="action-stack">
                 <button
-                  className={savedIds.has(reel._id) ? 'action-btn active' : 'action-btn'}
+                  className={savedIds.has(reel._id) ? 'action-btn active save-active' : 'action-btn'}
                   onClick={() => toggleSave(reel._id)}
                   aria-label="Bookmark"
                   type="button"
                 >
                   <BookmarkIcon filled={savedIds.has(reel._id)} />
                 </button>
-                <div className="action-count">Save: {reel.saveCount ?? 0}</div>
+                <div className="action-count">{reel.saveCount ?? 0}</div>
               </div>
             </div>
             <div className="reel-overlay">
-              <div>
-                <div className="reel-title">{reel.name}</div>
-                <div className="reel-description">{reel.description}</div>
+              <div className="reel-overlay-inner">
+                <div className="reel-info">
+                  {(reel.merchant?.restaurantName || reel.merchant?.name) && (
+                    <div className="reel-merchant-tag">🍴 {reel.merchant.restaurantName || reel.merchant.name}</div>
+                  )}
+                  <div className="reel-title">{reel.name}</div>
+                  <div className="reel-description">{reel.description}</div>
+                  {reel.price && <div className="reel-price">₹{reel.price}</div>}
+                  <button
+                    className={cartAddedIds.has(reel._id) ? 'reel-add-cart cart-added' : 'reel-add-cart'}
+                    onClick={() => addToCart(reel._id)}
+                    type="button"
+                  >
+                    {cartAddedIds.has(reel._id) ? '✓ Added to Cart' : '🛒 Add to Cart'}
+                  </button>
+                </div>
+                <Link className="reel-visit" to={'/store/' + (reel.merchant?._id || reel.merchant)}>
+                  Visit Store
+                </Link>
               </div>
-              <Link className="reel-visit" to={"/store/" + (reel.merchant?._id || reel.merchant)} >
-                Visit Store
-              </Link>
             </div>
           </section>
         ))}
       </div>
       <BottomNav />
-      <CommentsModal 
+      <CommentsModal
         isOpen={isCommentsOpen}
         productId={selectedReelId}
         foodId={selectedReelId}
         onClose={() => setIsCommentsOpen(false)}
-        reelData={videos.find(v => v._id === selectedReelId)}
+        reelData={videos.find((v) => v._id === selectedReelId)}
         onCommentAdded={handleCommentAdded}
       />
     </div>

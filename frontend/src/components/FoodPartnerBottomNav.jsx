@@ -9,9 +9,10 @@ function HomeGlyph({ active }) {
     <svg className="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10.5Z"
-        stroke={active ? '#60a5fa' : 'currentColor'}
+        stroke={active ? '#FF6B35' : 'currentColor'}
         strokeWidth="1.8"
         strokeLinejoin="round"
+        fill={active ? 'rgba(255,107,53,0.15)' : 'none'}
       />
     </svg>
   )
@@ -24,12 +25,12 @@ function PlusGlyph({ active }) {
         cx="12"
         cy="12"
         r="9"
-        stroke={active ? '#60a5fa' : 'currentColor'}
+        stroke={active ? '#FF6B35' : 'currentColor'}
         strokeWidth="1.8"
       />
       <path
         d="M12 8v8M8 12h8"
-        stroke={active ? '#60a5fa' : 'currentColor'}
+        stroke={active ? '#FF6B35' : 'currentColor'}
         strokeWidth="1.8"
         strokeLinecap="round"
       />
@@ -42,9 +43,10 @@ function SavedGlyph({ active }) {
     <svg className="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M6 4h12a1 1 0 0 1 1 1v16l-7-4-7 4V5a1 1 0 0 1 1-1Z"
-        stroke={active ? '#60a5fa' : 'currentColor'}
+        stroke={active ? '#FF6B35' : 'currentColor'}
         strokeWidth="1.8"
         strokeLinejoin="round"
+        fill={active ? 'rgba(255,107,53,0.15)' : 'none'}
       />
     </svg>
   )
@@ -57,12 +59,12 @@ function ProfileGlyph({ active }) {
         cx="12"
         cy="8"
         r="3.5"
-        stroke={active ? '#60a5fa' : 'currentColor'}
+        stroke={active ? '#FF6B35' : 'currentColor'}
         strokeWidth="1.8"
       />
       <path
         d="M5.5 19.5c.8-4 13.2-4 14 0"
-        stroke={active ? '#60a5fa' : 'currentColor'}
+        stroke={active ? '#FF6B35' : 'currentColor'}
         strokeWidth="1.8"
         strokeLinecap="round"
       />

@@ -1,6 +1,6 @@
 import React from 'react'
 import api from '../../api/axios'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import CommentsModal from '../../components/CommentsModal'
 import FoodPartnerBottomNav from '../../components/FoodPartnerBottomNav'
 
@@ -79,6 +79,7 @@ export default function FoodPartnerHome() {
   const [videos, setVideos] = React.useState([])
   const [savedIds, setSavedIds] = React.useState(() => safeLoadIdSet(LS_KEYS.saved))
   const [likedIds, setLikedIds] = React.useState(() => safeLoadIdSet(LS_KEYS.liked))
+  const [heartBeatId, setHeartBeatId] = React.useState(null)
   const videoRefs = React.useRef(new Map())
   const [isCommentsOpen, setIsCommentsOpen] = React.useState(false)
   const [selectedReelId, setSelectedReelId] = React.useState(null)
@@ -164,6 +165,11 @@ export default function FoodPartnerHome() {
       )
     )
 
+    if (!alreadyLiked) {
+      setHeartBeatId(foodId)
+      setTimeout(() => setHeartBeatId(null), 500)
+    }
+
     try {
       await api.post('/api/product/like', { productId: foodId })
     } catch (e) {
@@ -173,8 +179,6 @@ export default function FoodPartnerHome() {
       setVideos((prev) => prev.map((v) => (v._id === foodId ? { ...v, likeCount: prevLikeCount } : v)))
     }
   }
-
-  const navigate = useNavigate()
 
   const toggleSave = async (foodId) => {
     const prevSaved = new Set(savedIds)
@@ -228,14 +232,18 @@ export default function FoodPartnerHome() {
             <div className="reel-actions" aria-label="Reel actions">
               <div className="action-stack">
                 <button
-                  className={likedIds.has(reel._id) ? 'action-btn active' : 'action-btn'}
+                  className={[
+                    'action-btn',
+                    likedIds.has(reel._id) ? 'active like-active' : '',
+                    heartBeatId === reel._id ? 'heart-beat' : '',
+                  ].filter(Boolean).join(' ')}
                   onClick={() => toggleLike(reel._id)}
                   aria-label="Like"
                   type="button"
                 >
                   <HeartIcon filled={likedIds.has(reel._id)} />
                 </button>
-                <div className="action-count">Likes: {reel.likeCount ?? 0}</div>
+                <div className="action-count">{reel.likeCount ?? 0}</div>
               </div>
 
               <div className="action-stack">
@@ -250,29 +258,39 @@ export default function FoodPartnerHome() {
                 >
                   <CommentIcon />
                 </button>
-                <div className="action-count">Comment: {reel.commentCount ?? 0}</div>
+                <div className="action-count">{reel.commentCount ?? 0}</div>
               </div>
 
               <div className="action-stack">
                 <button
-                  className={savedIds.has(reel._id) ? 'action-btn active' : 'action-btn'}
+                  className={savedIds.has(reel._id) ? 'action-btn active save-active' : 'action-btn'}
                   onClick={() => toggleSave(reel._id)}
                   aria-label="Bookmark"
                   type="button"
                 >
                   <BookmarkIcon filled={savedIds.has(reel._id)} />
                 </button>
-                <div className="action-count">Save: {reel.saveCount ?? 0}</div>
+                <div className="action-count">{reel.saveCount ?? 0}</div>
               </div>
             </div>
+
             <div className="reel-overlay">
-              <div>
-                <div className="reel-title">{reel.name}</div>
-                <div className="reel-description">{reel.description}</div>
+              <div className="reel-overlay-inner">
+                <div className="reel-info">
+                  {(reel.merchant?.restaurantName || reel.merchant?.name) && (
+                    <div className="reel-merchant-tag">🍴 {reel.merchant.restaurantName || reel.merchant.name}</div>
+                  )}
+                  <div className="reel-title">{reel.name}</div>
+                  <div className="reel-description">{reel.description}</div>
+                  {reel.price && <div className="reel-price">₹{reel.price}</div>}
+                </div>
+                <Link
+                  className="reel-visit"
+                  to={'/store/' + (reel.merchant?._id || reel.merchant || reel.foodPartner)}
+                >
+                  Visit Store
+                </Link>
               </div>
-              <Link className="reel-visit" to={'/store/' + (reel.merchant?._id || reel.merchant || reel.foodPartner)}>
-                Visit Store
-              </Link>
             </div>
           </section>
         ))}

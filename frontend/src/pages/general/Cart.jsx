@@ -32,43 +32,61 @@ export default function Cart() {
     }
   }
 
-  if (loading) return <div style={{ padding: '2rem', color: '#fff' }}>Loading cart…</div>
+  if (loading) return <div className="page-loading">Loading cart...</div>
 
   return (
-    <div style={{ padding: '2rem', maxWidth: 480, margin: '0 auto', color: '#fff' }}>
-      <h1 style={{ marginBottom: '1.5rem' }}>Your Cart</h1>
+    <div className="page-shell">
+      <div className="page-header">
+        <button className="page-back-btn" onClick={() => navigate(-1)} aria-label="Go back">←</button>
+        <div>
+          <h1 className="page-title">Your Cart</h1>
+          {cart.items.length > 0 && (
+            <p className="page-subtitle">{cart.items.length} item{cart.items.length !== 1 ? 's' : ''}</p>
+          )}
+        </div>
+      </div>
 
       {cart.items.length === 0 ? (
-        <p style={{ color: '#9ca3af' }}>Your cart is empty.</p>
+        <div className="empty-state">
+          <div className="empty-state-icon">🛒</div>
+          <h2 className="empty-state-title">Your cart is empty</h2>
+          <p className="empty-state-sub">Add some delicious items from the feed to get started.</p>
+        </div>
       ) : (
         <>
-          {cart.items.map(item => (
-            <div key={item.productId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 0', borderBottom: '1px solid #374151' }}>
-              <div>
-                <div style={{ fontWeight: 600 }}>{item.name}</div>
-                <div style={{ fontSize: 13, color: '#9ca3af' }}>₹{item.price} × {item.quantity}</div>
+          <div className="cart-summary-card">
+            {cart.items.map(item => (
+              <div key={item.productId} className="cart-item">
+                <div>
+                  <div className="cart-item-name">{item.name}</div>
+                  <div className="cart-item-meta">₹{item.price} × {item.quantity}</div>
+                </div>
+                <div className="cart-item-right">
+                  <span className="cart-item-total">₹{item.price * item.quantity}</span>
+                  <button
+                    className="cart-remove-btn"
+                    onClick={() => remove(item.productId)}
+                    aria-label="Remove item"
+                  >✕</button>
+                </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <span>₹{item.price * item.quantity}</span>
-                <button onClick={() => remove(item.productId)} style={{ color: '#f87171', background: 'none', border: 'none', cursor: 'pointer', fontSize: 18 }}>✕</button>
-              </div>
-            </div>
-          ))}
+            ))}
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1.5rem', fontWeight: 700, fontSize: 18 }}>
-            <span>Total</span>
-            <span>₹{cart.totalAmount}</span>
+            <div className="order-total-row" style={{ marginTop: '0.75rem' }}>
+              <span className="order-total-label">Total</span>
+              <span className="order-total-amount">₹{cart.totalAmount}</span>
+            </div>
           </div>
 
           <input
+            className="delivery-address-input"
             value={address}
             onChange={e => setAddress(e.target.value)}
             placeholder="Delivery address (optional)"
-            style={{ marginTop: '1rem', width: '100%', padding: '0.75rem', background: '#1f2937', color: '#fff', border: '1px solid #374151', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
           />
 
-          <button onClick={placeOrder} style={{ marginTop: '1rem', width: '100%', padding: '0.875rem', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, fontSize: 16, fontWeight: 600, cursor: 'pointer' }}>
-            Place Order
+          <button className="place-order-btn" onClick={placeOrder}>
+            Place Order →
           </button>
         </>
       )}

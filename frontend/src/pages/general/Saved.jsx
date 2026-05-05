@@ -26,9 +26,10 @@ function HomeGlyph({ active }) {
     <svg className="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10.5Z"
-        stroke={active ? '#60a5fa' : 'currentColor'}
+        stroke={active ? '#FF6B35' : 'currentColor'}
         strokeWidth="1.8"
         strokeLinejoin="round"
+        fill={active ? 'rgba(255,107,53,0.15)' : 'none'}
       />
     </svg>
   )
@@ -39,9 +40,10 @@ function SavedGlyph({ active }) {
     <svg className="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M6 4h12a1 1 0 0 1 1 1v16l-7-4-7 4V5a1 1 0 0 1 1-1Z"
-        stroke={active ? '#60a5fa' : 'currentColor'}
+        stroke={active ? '#FF6B35' : 'currentColor'}
         strokeWidth="1.8"
         strokeLinejoin="round"
+        fill={active ? 'rgba(255,107,53,0.15)' : 'none'}
       />
     </svg>
   )
@@ -126,6 +128,7 @@ const Saved = () => {
   const [videos, setVideos] = React.useState([])
   const [savedIds, setSavedIds] = React.useState(new Set())
   const [likedIds, setLikedIds] = React.useState(new Set())
+  const [heartBeatId, setHeartBeatId] = React.useState(null)
   const videoRefs = React.useRef(new Map())
   const [isCommentsOpen, setIsCommentsOpen] = React.useState(false)
   const [selectedReelId, setSelectedReelId] = React.useState(null)
@@ -184,10 +187,7 @@ const Saved = () => {
 
   const setVideoRef = (id) => (el) => {
     if (el) videoRefs.current.set(id, el)
-    else {
-      videoRefs.current.delete(id)
-      return
-    }
+    else videoRefs.current.delete(id)
   }
 
   const persistSet = (key, nextSet) => {
@@ -212,6 +212,11 @@ const Saved = () => {
           : v
       )
     )
+
+    if (!alreadyLiked) {
+      setHeartBeatId(foodId)
+      setTimeout(() => setHeartBeatId(null), 500)
+    }
 
     try {
       await api.post('/api/product/like', { productId: foodId })
@@ -271,86 +276,102 @@ const Saved = () => {
   return (
     <div className="reels-shell">
       <div className="reels-list">
-        {savedVideos.map((reel) => (
-          <section className="reel-item" key={reel._id}>
-            <video
-              src={reel.videoUrl || reel.video}
-              ref={setVideoRef(reel._id)}
-              className="reel-video"
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-            />
-
-            <div className="reel-actions" aria-label="Reel actions">
-              <div className="action-stack">
-                <button
-                  className={likedIds.has(reel._id) ? 'action-btn active' : 'action-btn'}
-                  onClick={() => toggleLike(reel._id)}
-                  aria-label="Like"
-                  type="button"
-                >
-                  <HeartIcon filled={likedIds.has(reel._id)} />
-                </button>
-                <div className="action-count">Likes: {reel.likeCount ?? 0}</div>
-              </div>
-
-              <div className="action-stack">
-                <button 
-                  className="action-btn" 
-                  type="button" 
-                  aria-label="Comment"
-                  onClick={() => {
-                    setSelectedReelId(reel._id)
-                    setIsCommentsOpen(true)
-                  }}
-                >
-                  <CommentIcon />
-                </button>
-                <div className="action-count">Comment: {reel.commentCount ?? 0}</div>
-              </div>
-
-              <div className="action-stack">
-                <button
-                  className={savedIds.has(reel._id) ? 'action-btn active' : 'action-btn'}
-                  onClick={() => toggleSave(reel._id)}
-                  aria-label="Bookmark"
-                  type="button"
-                >
-                  <BookmarkIcon filled={savedIds.has(reel._id)} />
-                </button>
-                <div className="action-count">Save: {reel.saveCount ?? 0}</div>
-              </div>
-            </div>
-
-            <div className="reel-overlay">
-              <div>
-                <div className="reel-title">{reel.name}</div>
-                <div className="reel-description">{reel.description}</div>
-              </div>
-              <Link className="reel-visit" to={'/store/' + (reel.merchant?._id || reel.merchant || reel.foodPartner)}>
-                Visit Store
-              </Link>
-            </div>
-          </section>
-        ))}
-
         {savedVideos.length === 0 ? (
           <div className="saved-empty">
-            <div className="saved-empty-title">No saved videos yet</div>
-            <div className="saved-empty-sub">Save videos from the Home page using the bookmark icon.</div>
+            <div className="saved-empty-icon">🔖</div>
+            <div className="saved-empty-title">Nothing saved yet</div>
+            <div className="saved-empty-sub">
+              Tap the bookmark icon on any dish to save it here.
+            </div>
           </div>
-        ) : null}
+        ) : (
+          savedVideos.map((reel) => (
+            <section className="reel-item" key={reel._id}>
+              <video
+                src={reel.videoUrl || reel.video}
+                ref={setVideoRef(reel._id)}
+                className="reel-video"
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+              />
+
+              <div className="reel-actions" aria-label="Reel actions">
+                <div className="action-stack">
+                  <button
+                    className={[
+                      'action-btn',
+                      likedIds.has(reel._id) ? 'active like-active' : '',
+                      heartBeatId === reel._id ? 'heart-beat' : '',
+                    ].filter(Boolean).join(' ')}
+                    onClick={() => toggleLike(reel._id)}
+                    aria-label="Like"
+                    type="button"
+                  >
+                    <HeartIcon filled={likedIds.has(reel._id)} />
+                  </button>
+                  <div className="action-count">{reel.likeCount ?? 0}</div>
+                </div>
+
+                <div className="action-stack">
+                  <button
+                    className="action-btn"
+                    type="button"
+                    aria-label="Comment"
+                    onClick={() => {
+                      setSelectedReelId(reel._id)
+                      setIsCommentsOpen(true)
+                    }}
+                  >
+                    <CommentIcon />
+                  </button>
+                  <div className="action-count">{reel.commentCount ?? 0}</div>
+                </div>
+
+                <div className="action-stack">
+                  <button
+                    className={savedIds.has(reel._id) ? 'action-btn active save-active' : 'action-btn'}
+                    onClick={() => toggleSave(reel._id)}
+                    aria-label="Bookmark"
+                    type="button"
+                  >
+                    <BookmarkIcon filled={savedIds.has(reel._id)} />
+                  </button>
+                  <div className="action-count">{reel.saveCount ?? 0}</div>
+                </div>
+              </div>
+
+              <div className="reel-overlay">
+                <div className="reel-overlay-inner">
+                  <div className="reel-info">
+                    {(reel.merchant?.restaurantName || reel.merchant?.name) && (
+                      <div className="reel-merchant-tag">🍴 {reel.merchant.restaurantName || reel.merchant.name}</div>
+                    )}
+                    <div className="reel-title">{reel.name}</div>
+                    <div className="reel-description">{reel.description}</div>
+                    {reel.price && <div className="reel-price">₹{reel.price}</div>}
+                  </div>
+                  <Link
+                    className="reel-visit"
+                    to={'/store/' + (reel.merchant?._id || reel.merchant || reel.foodPartner)}
+                  >
+                    Visit Store
+                  </Link>
+                </div>
+              </div>
+            </section>
+          ))
+        )}
       </div>
 
       {usePartnerDock ? <FoodPartnerBottomNav /> : <BottomNav />}
-      <CommentsModal 
+      <CommentsModal
         isOpen={isCommentsOpen}
         foodId={selectedReelId}
         onClose={() => setIsCommentsOpen(false)}
-        reelData={videos.find(v => v._id === selectedReelId)}
+        reelData={videos.find((v) => v._id === selectedReelId)}
         onCommentAdded={handleCommentAdded}
       />
     </div>
