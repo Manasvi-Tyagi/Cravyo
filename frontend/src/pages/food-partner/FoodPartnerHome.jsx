@@ -1,6 +1,6 @@
 import React from 'react'
 import api from '../../api/axios'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import CommentsModal from '../../components/CommentsModal'
 import FoodPartnerBottomNav from '../../components/FoodPartnerBottomNav'
 
@@ -76,6 +76,7 @@ function BookmarkIcon({ filled }) {
 }
 
 export default function FoodPartnerHome() {
+  const navigate = useNavigate()
   const [videos, setVideos] = React.useState([])
   const [savedIds, setSavedIds] = React.useState(() => safeLoadIdSet(LS_KEYS.saved))
   const [likedIds, setLikedIds] = React.useState(() => safeLoadIdSet(LS_KEYS.liked))

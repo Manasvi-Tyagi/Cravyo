@@ -9,7 +9,14 @@ const app = express();
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
-app.use(cors({ origin: config.frontendUrl, credentials: true }));
+const allowedOrigins = config.frontendUrl.split(',').map(o => o.trim());
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(null, false);
+  },
+  credentials: true,
+}));
 app.use(cookieParser());
 
 // ── Routes ────────────────────────────────────────────────────────────────────

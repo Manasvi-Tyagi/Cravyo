@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../api/axios'
+import BottomNav from '../../components/BottomNav'
 
 export default function Orders() {
   const [orders, setOrders] = useState([])
@@ -79,6 +80,7 @@ export default function Orders() {
           </div>
         ))
       )}
+      <BottomNav />
     </div>
   )
 }

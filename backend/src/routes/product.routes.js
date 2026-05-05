@@ -22,7 +22,8 @@ router.get('/saved', authCustomerMiddleware, getSavedProducts);
 
 // Comments
 router.post('/comment', authCustomerMiddleware, addComment);
-router.get('/comment/:productId', authCustomerMiddleware, getComments);
+// Comments — GET is public, write actions require auth
+router.get('/comment/:productId', getComments);
 router.delete('/comment/:commentId', authCustomerMiddleware, deleteComment);
 router.patch('/comment/:commentId', authCustomerMiddleware, editComment);
 router.post('/comment/like', authCustomerMiddleware, likeComment);

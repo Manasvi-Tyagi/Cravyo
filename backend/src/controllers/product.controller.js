@@ -165,7 +165,7 @@ const addComment = asyncHandler(async (req, res) => {
 
 const getComments = asyncHandler(async (req, res) => {
   const { productId } = req.params;
-  const userId = req.customer._id;
+  const userId = req.customer?._id || null;
 
   const comments = await CommentModel.find({ product: productId })
     .populate('user', 'name profileImage')
@@ -173,7 +173,7 @@ const getComments = asyncHandler(async (req, res) => {
 
   const withStatus = comments.map((c) => ({
     ...c.toObject(),
-    isLikedByUser: c.likedBy.includes(userId),
+    isLikedByUser: userId ? c.likedBy.includes(userId) : false,
   }));
 
   res.status(200).json(new ApiResponse(200, { comments: withStatus }));

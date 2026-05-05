@@ -68,7 +68,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 const getCurrentUser = asyncHandler(async (req, res) => {
   const user = req.customer;
   if (!user) throw new ApiError(401, "Not authenticated");
-  res.status(200).json(new ApiResponse(200, { id: user._id, name: user.name, email: user.email }));
+  res.status(200).json(new ApiResponse(200, { id: user._id, name: user.name, email: user.email, profileImage: user.profileImage }));
 });
 
 // ── MERCHANT ──────────────────────────────────────────────────────────────────

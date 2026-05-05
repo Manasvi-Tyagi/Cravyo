@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import api from '../../api/axios'
 import { FOOD_PARTNER_ID_KEY } from '../../components/FoodPartnerBottomNav'
+import BottomNav from '../../components/BottomNav'
 
 export default function UserRegister() {
   const navigate = useNavigate()
@@ -49,6 +50,7 @@ export default function UserRegister() {
           </p>
         </form>
       </div>
+      <BottomNav />
     </div>
   )
 }

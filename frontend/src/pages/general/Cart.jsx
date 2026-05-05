@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../api/axios'
+import BottomNav from '../../components/BottomNav'
 
 export default function Cart() {
   const [cart, setCart] = useState({ items: [], totalAmount: 0 })
@@ -18,7 +19,7 @@ export default function Cart() {
   const remove = async (productId) => {
     await api.delete(`/api/cart/item/${productId}`)
     setCart(prev => {
-      const items = prev.items.filter(i => i.productId !== productId)
+      const items = prev.items.filter(i => String(i.productId) !== productId)
       return { ...prev, items, totalAmount: items.reduce((s, i) => s + i.price * i.quantity, 0) }
     })
   }
@@ -90,6 +91,7 @@ export default function Cart() {
           </button>
         </>
       )}
+      <BottomNav />
     </div>
   )
 }

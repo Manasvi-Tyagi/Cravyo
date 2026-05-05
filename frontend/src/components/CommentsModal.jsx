@@ -71,7 +71,7 @@ const CommentsModal = ({ isOpen, productId, foodId, onClose, reelData, onComment
     const fetchCurrentUser = async () => {
       try {
         const response = await api.get('/api/auth/user/me')
-        setCurrentUserId(response.data.user?.id || response.data.data?.id)
+        setCurrentUserId(response.data.data?.id)
       } catch (error) {
         console.error('Error fetching current user:', error)
       }
@@ -110,7 +110,7 @@ const CommentsModal = ({ isOpen, productId, foodId, onClose, reelData, onComment
       
       // Update local state based on response
       const newLiked = new Set(likedComments)
-      if (response.data.isLiked) {
+      if (response.data.data?.isLiked) {
         newLiked.add(commentId)
         console.log('Added to liked comments')
       } else {
@@ -124,7 +124,7 @@ const CommentsModal = ({ isOpen, productId, foodId, onClose, reelData, onComment
       setComments(prevComments => 
         prevComments.map(comment => 
           comment._id === commentId 
-            ? { ...comment, likes: response.data.likeCount }
+            ? { ...comment, likes: response.data.data?.likeCount }
             : comment
         )
       )
@@ -156,7 +156,7 @@ const CommentsModal = ({ isOpen, productId, foodId, onClose, reelData, onComment
       setComments(prevComments => 
         prevComments.map(comment => 
           comment._id === editingCommentId 
-            ? { ...comment, text: response.data.comment.text }
+            ? { ...comment, text: response.data.data?.comment?.text }
             : comment
         )
       )
@@ -185,7 +185,7 @@ const CommentsModal = ({ isOpen, productId, foodId, onClose, reelData, onComment
       })
       
       // Notify parent component to update comment count
-      if (onCommentAdded) onCommentAdded(foodId, -1) // -1 to decrement count
+      if (onCommentAdded) onCommentAdded(itemId, -1)
     } catch (error) {
       console.error('Error deleting comment:', error)
     }

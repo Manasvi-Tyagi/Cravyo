@@ -1,10 +1,8 @@
 import React from 'react'
 import api from '../../api/axios'
-import { Link, NavLink, useLocation } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import CommentsModal from '../../components/CommentsModal'
-import FoodPartnerBottomNav, {
-  FOOD_PARTNER_ID_KEY,
-} from '../../components/FoodPartnerBottomNav'
+import BottomNav from '../../components/BottomNav'
 
 const LS_KEYS = {
   saved: 'savedFoodIds',
@@ -19,34 +17,6 @@ function safeLoadIdSet(key) {
   } catch {
     return new Set()
   }
-}
-
-function HomeGlyph({ active }) {
-  return (
-    <svg className="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10.5Z"
-        stroke={active ? '#FF6B35' : 'currentColor'}
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-        fill={active ? 'rgba(255,107,53,0.15)' : 'none'}
-      />
-    </svg>
-  )
-}
-
-function SavedGlyph({ active }) {
-  return (
-    <svg className="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M6 4h12a1 1 0 0 1 1 1v16l-7-4-7 4V5a1 1 0 0 1 1-1Z"
-        stroke={active ? '#FF6B35' : 'currentColor'}
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-        fill={active ? 'rgba(255,107,53,0.15)' : 'none'}
-      />
-    </svg>
-  )
 }
 
 function HeartIcon({ filled }) {
@@ -97,33 +67,6 @@ function BookmarkIcon({ filled }) {
   )
 }
 
-function BottomNav() {
-  const location = useLocation()
-  const homeActive = location.pathname === '/'
-  const savedActive = location.pathname.startsWith('/saved')
-
-  return (
-    <nav className="bottom-nav" aria-label="Bottom navigation">
-      <NavLink
-        to="/"
-        end
-        className={homeActive ? 'bottom-nav-link active' : 'bottom-nav-link'}
-      >
-        <HomeGlyph active={homeActive} />
-        <span className="bottom-nav-label">home</span>
-      </NavLink>
-
-      <NavLink
-        to="/saved"
-        className={savedActive ? 'bottom-nav-link active' : 'bottom-nav-link'}
-      >
-        <SavedGlyph active={savedActive} />
-        <span className="bottom-nav-label">saved</span>
-      </NavLink>
-    </nav>
-  )
-}
-
 const Saved = () => {
   const [videos, setVideos] = React.useState([])
   const [savedIds, setSavedIds] = React.useState(new Set())
@@ -132,19 +75,6 @@ const Saved = () => {
   const videoRefs = React.useRef(new Map())
   const [isCommentsOpen, setIsCommentsOpen] = React.useState(false)
   const [selectedReelId, setSelectedReelId] = React.useState(null)
-  const [usePartnerDock, setUsePartnerDock] = React.useState(() =>
-    Boolean(localStorage.getItem(FOOD_PARTNER_ID_KEY))
-  )
-
-  React.useEffect(() => {
-    api
-      .get('/api/auth/merchant/me')
-      .then(() => setUsePartnerDock(true))
-      .catch(() => {
-        localStorage.removeItem(FOOD_PARTNER_ID_KEY)
-        setUsePartnerDock(false)
-      })
-  }, [])
 
   const savedVideos = React.useMemo(
     () => videos.filter((v) => savedIds.has(v._id)),
@@ -366,7 +296,7 @@ const Saved = () => {
         )}
       </div>
 
-      {usePartnerDock ? <FoodPartnerBottomNav /> : <BottomNav />}
+      {<BottomNav />}
       <CommentsModal
         isOpen={isCommentsOpen}
         foodId={selectedReelId}
