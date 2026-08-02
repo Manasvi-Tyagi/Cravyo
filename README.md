@@ -1,8 +1,8 @@
 # 🍽️ Cravyo - Reel-Based Food Discovery Platform
 
-Cravyo is a full-stack food discovery platform inspired by Instagram Reels, designed to help users discover restaurants and dishes through engaging short-form videos. It enables customers to browse food reels, interact with content, and order food, while allowing food partners to showcase their dishes and manage their restaurant profiles.
+Cravyo is a full-stack food discovery platform inspired by Instagram Reels, designed to help users discover restaurants and dishes through engaging short-form videos. It enables customers to browse food reels, interact with content, and discover new restaurants, while allowing food partners to showcase their dishes by uploading short-form video content.
 
-The project follows a hybrid database architecture where **MySQL** is used for structured authentication data and **MongoDB** is used for highly scalable social media content such as reels, likes, comments, and carts. This architecture combines the strengths of both relational and NoSQL databases while maintaining scalability and performance.
+The project follows a hybrid database architecture where **MySQL** is used for structured authentication data and **MongoDB** is used for highly scalable social media content such as reels, likes, comments, and saved reels. This architecture combines the strengths of relational and NoSQL databases to build a scalable and production-ready application.
 
 ---
 
@@ -10,28 +10,25 @@ The project follows a hybrid database architecture where **MySQL** is used for s
 
 ## 👤 Customer
 
-- Register and Login
+- Register & Login
 - Secure JWT Authentication
 - Browse Food Reels
 - Infinite Scroll Feed
-- Like Reels
+- Like Food Reels
 - Comment on Reels
-- Save Reels
+- Save Favorite Reels
 - Search Food & Restaurants
-- Add Food to Cart
-- Place Orders
 - Logout
 
 ---
 
 ## 🏪 Food Partner
 
-- Register and Login
+- Register & Login
 - Secure JWT Authentication
 - Upload Food Reels
 - Manage Restaurant Profile
 - Add Food Items
-- View Orders
 - Logout
 
 ---
@@ -52,15 +49,10 @@ The project follows a hybrid database architecture where **MySQL** is used for s
 (Authentication)                              (Social Content Storage)
          │                                                │
          │                                                │
- Customers                                    Food Reels
- Food Partners                                Likes
-                                              Comments
-                                              Saved Reels
-                                              Cart
-                                              Categories
-
-         │
-         ▼
+ Customers                                          Food Reels
+ Food Partners                                      Likes 
+         │                                          Comments
+         ▼                                          Saved Reels
  JWT Authentication
 
          │
@@ -83,8 +75,8 @@ The project follows a hybrid database architecture where **MySQL** is used for s
 ## Frontend
 
 - React.js
-- Axios
 - React Router DOM
+- Axios
 - Tailwind CSS
 
 ---
@@ -107,13 +99,12 @@ Used for structured relational data.
 
 ### MongoDB
 
-Used for document-based data.
+Used for document-based social media data.
 
 - Food Reels
 - Likes
 - Comments
 - Saved Reels
-- Cart
 
 ---
 
@@ -163,9 +154,7 @@ backend
 ├── controllers
 │   ├── auth.controller.js
 │   ├── food.controller.js
-│   ├── cart.controller.js
-│   ├── order.controller.js
-│   └── foodPartner.controller.js
+│   ├── foodPartner.controller.js
 │
 ├── models
 │   ├── customer.model.js
@@ -173,15 +162,11 @@ backend
 │   ├── food.model.js
 │   ├── likes.model.js
 │   ├── comments.model.js
-│   ├── save.model.js
-│   ├── cart.model.js
-│   └── order.model.js
+│   └── save.model.js
 │
 ├── routes
 │   ├── auth.routes.js
 │   ├── food.routes.js
-│   ├── cart.routes.js
-│   ├── order.routes.js
 │   └── foodPartner.routes.js
 │
 ├── middlewares
@@ -239,7 +224,6 @@ foods
 likes
 comments
 saved_reels
-cart
 ```
 
 ---
@@ -296,7 +280,7 @@ Compare Password using bcrypt
 Generate JWT
       │
       ▼
-Store JWT in Cookie
+Store JWT in HTTP Only Cookie
       │
       ▼
 Login Successful
@@ -310,22 +294,22 @@ Login Successful
 Food Partner
       │
       ▼
-Upload Video + Thumbnail
+Upload Reel
       │
       ▼
-Multer Middleware
+Multer
       │
       ▼
 ImageKit Upload
       │
       ▼
-Receive Image URLs
+Receive CDN URL
       │
       ▼
 Store Reel Metadata in MongoDB
       │
       ▼
-Food Reel Available
+Food Reel Published
 ```
 
 ---
@@ -385,33 +369,10 @@ Save Reel
 Verify JWT
       │
       ▼
-Store Saved Reel
+Store Saved Reel in MongoDB
       │
       ▼
-Available in Saved Section
-```
-
----
-
-# 🛒 Cart Flow
-
-```
-Customer
-      │
-      ▼
-Add Food Item
-      │
-      ▼
-Verify JWT
-      │
-      ▼
-Store Cart in MongoDB
-      │
-      ▼
-Update Quantity
-      │
-      ▼
-Checkout
+Available in Saved Collection
 ```
 
 ---
@@ -422,61 +383,38 @@ Checkout
 Customer
       │
       ▼
-Search Dish
+Search Food / Restaurant
       │
       ▼
 Elasticsearch
       │
       ▼
-Relevant Food Reels
-```
-
----
-
-# 📦 Order Flow
-
-```
-Customer
-      │
-      ▼
-Checkout
-      │
-      ▼
-Validate Cart
-      │
-      ▼
-Create Order
-      │
-      ▼
-Notify Food Partner
-      │
-      ▼
-Order Confirmed
+Matching Food Reels
 ```
 
 ---
 
 # 📡 REST APIs
 
-## Authentication
+## Customer Authentication
 
 | Method | Endpoint | Description |
 |---------|----------|-------------|
 | POST | `/api/auth/register` | Register Customer |
 | POST | `/api/auth/login` | Login Customer |
 | POST | `/api/auth/logout` | Logout Customer |
-| GET | `/api/auth/me` | Current Customer |
+| GET | `/api/auth/me` | Get Current Customer |
 
 ---
 
-## Food Partner
+## Food Partner Authentication
 
 | Method | Endpoint | Description |
 |---------|----------|-------------|
 | POST | `/api/partner/register` | Register Food Partner |
 | POST | `/api/partner/login` | Login Food Partner |
 | POST | `/api/partner/logout` | Logout Food Partner |
-| GET | `/api/partner/me` | Current Food Partner |
+| GET | `/api/partner/me` | Get Current Food Partner |
 
 ---
 
@@ -508,17 +446,6 @@ Order Confirmed
 | POST | `/api/comments` |
 | GET | `/api/comments/:foodId` |
 | DELETE | `/api/comments/:id` |
-
----
-
-## Cart APIs
-
-| Method | Endpoint |
-|---------|----------|
-| POST | `/api/cart/add` |
-| GET | `/api/cart` |
-| PATCH | `/api/cart/update` |
-| DELETE | `/api/cart/remove/:id` |
 
 ---
 
@@ -558,7 +485,7 @@ Clone the repository
 git clone https://github.com/yourusername/cravyo.git
 ```
 
-Move into the project
+Navigate to the project
 
 ```bash
 cd cravyo
@@ -580,15 +507,22 @@ npm run dev
 
 # 🔮 Future Enhancements
 
-- AI-powered automatic food tagging
-- Personalized recommendation engine
-- Restaurant analytics dashboard
-- Real-time notifications
-- Payment Gateway Integration
+- Shopping Cart System
+- Food Ordering & Checkout
 - Order Tracking
+- Payment Gateway Integration (Stripe/Razorpay)
+- AI-powered Automatic Food Tagging
+- Personalized Food Recommendations
+- Restaurant Analytics Dashboard
+- Real-time Notifications
 - Ratings & Reviews
+- Follow Restaurants
+- User Profiles
+- Restaurant Verification
+- Trending & Recommended Reels
 - Admin Dashboard
 - Multi-language Support
+- Dark Mode
 
 ---
 
