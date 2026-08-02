@@ -485,7 +485,7 @@ ELASTICSEARCH_NODE=
 Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/cravyo.git
+git clone https://github.com/Manasvi-Tyagi/cravyo.git
 ```
 
 Navigate to the project
