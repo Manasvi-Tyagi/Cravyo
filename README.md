@@ -31,43 +31,46 @@ The project follows a hybrid database architecture where **MySQL** is used for s
 - Add Food Items
 - Logout
 
----
+---# 🏗️ System Architecture
 
-# 🏗️ System Architecture
-
+```text
+                       Client Layer
+┌──────────────────────────────────────────────────────────────┐
+│                     React.js Frontend                        │
+│  Login • Feed • Search • Upload • Likes • Comments • Saves  │
+└──────────────────────────────────────────────────────────────┘
+                           │
+                    HTTPS / REST APIs
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────┐
+│                   Express.js Backend API                     │
+│                                                              │
+│  Routes → Middleware → Controllers → Services → Models       │
+└──────────────────────────────────────────────────────────────┘
+                           │
+      ┌────────────────────┼─────────────────────┐
+      │                    │                     │
+      ▼                    ▼                     ▼
+┌─────────────-─┐   ┌────────────────┐   ┌─────────────────┐
+│Authentication │   │ Business Logic │   │External Services│
+│               │   │                │   │                 │
+│ JWT           │   │ Food Reels     │   │ ImageKit CDN    │
+│ Cookies       │   │ Likes          │   │ Elasticsearch   │
+│ bcrypt        │   │ Comments       │   │ Redis Cache     │
+│               │   │ Saved Reels    │   │                 │
+└──────┬────────┘   └────────┬───────┘   └────────┬────────┘
+       │                     │                    │
+       ▼                     ▼                    ▼
+┌──────────────┐     ┌────────────────────────────────────────┐
+│    MySQL     │     │               MongoDB                  │
+│              │     │                                        │
+│ Customers    │     │ Food Reels                             │
+│ FoodPartners │     │ Likes                                  │
+│              │     │ Comments                               │
+└──────────────┘     │ Saved Reels                            │
+                     └────────────────────────────────────────┘
 ```
-                          React Frontend
-                                 │
-                                 │ REST APIs
-                                 ▼
-                      Express.js Backend
-                                 │
-         ┌───────────────────────┴────────────────────────┐
-         │                                                │
-         ▼                                                ▼
-      MySQL                                            MongoDB
-(Authentication)                              (Social Content Storage)
-         │                                                │
-         │                                                │
- Customers                                          Food Reels
- Food Partners                                      Likes 
-         │                                          Comments
-         ▼                                          Saved Reels
- JWT Authentication
-
-         │
-         ▼
- Redis Cache
-
-         │
-         ▼
- Elasticsearch
-
-         │
-         ▼
- ImageKit CDN
-```
-
 ---
 
 # 💻 Tech Stack
