@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 const app = require('./src/app');
-const connectDB = require('./src/db/db');
+const connectDB = require('./src/db/mongodb');
 const config = require('./src/config');
 const { connectMySQL } = require('./src/db/mysql');
 const { connectRedis, closeRedis } = require('./src/services/redis.service');
