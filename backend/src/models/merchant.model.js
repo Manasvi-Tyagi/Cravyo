@@ -10,6 +10,8 @@ const merchantSchema = new mongoose.Schema(
     restaurantName: { type: String, trim: true },
     image: { type: String },
     refreshToken: { type: String },
+    authProvider: { type: String, enum: ['mongodb', 'mysql'], default: 'mongodb' },
+    externalAuthId: { type: String, sparse: true },
   },
   { timestamps: true }
 );

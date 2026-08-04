@@ -4,8 +4,10 @@ const commentSchema = new mongoose.Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: true
+        required: false
     },
+    actorId: { type: String, index: true },
+    actorType: { type: String, enum: ["customer", "merchant"], default: "customer" },
     product: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Product",
@@ -24,6 +26,10 @@ const commentSchema = new mongoose.Schema({
     likedBy: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
+    }],
+    likedByActors: [{
+        actorId: { type: String, required: true },
+        actorType: { type: String, enum: ["customer", "merchant"], required: true }
     }]
 }, {
     timestamps: true

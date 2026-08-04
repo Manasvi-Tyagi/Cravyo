@@ -30,6 +30,15 @@ function SavedGlyph({ active }) {
   )
 }
 
+function SearchGlyph({ active }) {
+  return (
+    <svg className="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="11" cy="11" r="6.5" stroke={active ? '#FF6B35' : 'currentColor'} strokeWidth="1.8" />
+      <path d="M16 16l4.5 4.5" stroke={active ? '#FF6B35' : 'currentColor'} strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function CartGlyph({ active }) {
   return (
     <svg className="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -55,6 +64,7 @@ export default function BottomNav() {
 
   const homeActive = location.pathname === '/'
   const savedActive = location.pathname.startsWith('/saved')
+  const searchActive = location.pathname.startsWith('/search')
   const cartActive = location.pathname.startsWith('/cart')
   const profileActive = location.pathname.startsWith('/user') || location.pathname.startsWith('/orders')
 
@@ -77,6 +87,11 @@ export default function BottomNav() {
       <NavLink to="/saved" className={savedActive ? 'bottom-nav-link active' : 'bottom-nav-link'}>
         <SavedGlyph active={savedActive} />
         <span className="bottom-nav-label">saved</span>
+      </NavLink>
+
+      <NavLink to="/search" className={searchActive ? 'bottom-nav-link active' : 'bottom-nav-link'}>
+        <SearchGlyph active={searchActive} />
+        <span className="bottom-nav-label">search</span>
       </NavLink>
 
       <NavLink to="/cart" className={cartActive ? 'bottom-nav-link active' : 'bottom-nav-link'}>

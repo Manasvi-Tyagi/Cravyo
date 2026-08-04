@@ -14,6 +14,47 @@ const { uploadFileToImageKit } = require('../services/storage.services');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
+const UserModel = require('../models/user.model');
+const MerchantModel = require('../models/merchant.model');
+
+function actorFromRequest(req) {
+  if (req.authActor) return req.authActor;
+  if (req.customer) return { id: req.customer._id.toString(), type: 'customer', account: req.customer };
+  if (req.merchant) return { id: req.merchant._id.toString(), type: 'merchant', account: req.merchant };
+  return null;
+}
+
+function ownsComment(comment, actor) {
+  const id = comment.actorId || comment.user?.toString();
+  const type = comment.actorId ? comment.actorType : 'customer';
+  return id === actor.id && type === actor.type;
+}
+
+async function presentComment(comment, actor = null) {
+  const raw = comment.toObject();
+  const actorId = raw.actorId || raw.user?.toString();
+  const actorType = raw.actorId ? raw.actorType : 'customer';
+  const Model = actorType === 'merchant' ? MerchantModel : UserModel;
+  const account = actorId && require('mongoose').isValidObjectId(actorId)
+    ? await Model.findById(actorId).select('name profileImage image restaurantName')
+    : null;
+  const likedByActor = actor && (
+    raw.likedByActors?.some((entry) => entry.actorId === actor.id && entry.actorType === actor.type) ||
+    (actor.type === 'customer' && raw.likedBy?.some((id) => id.toString() === actor.id))
+  );
+  return {
+    ...raw,
+    user: account ? {
+      _id: account._id,
+      id: account._id,
+      name: account.restaurantName || account.name,
+      profileImage: account.profileImage || account.image || '',
+      role: actorType,
+    } : { _id: actorId, id: actorId, name: actorType === 'merchant' ? 'Merchant' : 'User', role: actorType },
+    isLikedByUser: Boolean(likedByActor),
+    isOwnComment: actor ? actorId === actor.id && actorType === actor.type : false,
+  };
+}
 
 // ── CREATE ─────────────────────────────────────────────────────────────────────
 
@@ -63,13 +104,21 @@ const getProducts = asyncHandler(async (req, res) => {
   const limit = Math.min(20, parseInt(req.query.limit) || 10);
   const skip = (page - 1) * limit;
 
-  const products = await ProductModel.find({})
+  const search = req.query.q?.trim();
+  const filter = search ? {
+    $or: [
+      { name: { $regex: search, $options: 'i' } },
+      { description: { $regex: search, $options: 'i' } },
+    ],
+  } : {};
+
+  const products = await ProductModel.find(filter)
     .populate('merchant', 'name restaurantName image')
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
 
-  const total = await ProductModel.countDocuments();
+  const total = await ProductModel.countDocuments(filter);
 
   res.status(200).json(new ApiResponse(200, {
     products,
@@ -149,42 +198,45 @@ const getSavedProducts = asyncHandler(async (req, res) => {
 
 const addComment = asyncHandler(async (req, res) => {
   const { productId, text } = req.body;
-  const userId = req.customer._id;
+  const actor = actorFromRequest(req);
+  if (!actor) throw new ApiError(401, "Not authenticated");
 
   if (!text || !text.trim()) throw new ApiError(400, "Comment cannot be empty");
 
   const product = await ProductModel.findById(productId);
   if (!product) throw new ApiError(404, "Product not found");
 
-  const comment = await CommentModel.create({ user: userId, product: productId, text: text.trim() });
+  const comment = await CommentModel.create({
+    user: actor.type === 'customer' ? actor.id : undefined,
+    actorId: actor.id,
+    actorType: actor.type,
+    product: productId,
+    text: text.trim(),
+  });
   await ProductModel.findByIdAndUpdate(productId, { $inc: { commentCount: 1 } });
 
-  const populated = await CommentModel.findById(comment._id).populate('user', 'name profileImage');
+  const populated = await presentComment(comment, actor);
   res.status(201).json(new ApiResponse(201, { comment: populated }, "Comment added"));
 });
 
 const getComments = asyncHandler(async (req, res) => {
   const { productId } = req.params;
-  const userId = req.customer?._id || null;
+  const actor = actorFromRequest(req);
 
   const comments = await CommentModel.find({ product: productId })
-    .populate('user', 'name profileImage')
     .sort({ createdAt: -1 });
 
-  const withStatus = comments.map((c) => ({
-    ...c.toObject(),
-    isLikedByUser: userId ? c.likedBy.includes(userId) : false,
-  }));
+  const withStatus = await Promise.all(comments.map((comment) => presentComment(comment, actor)));
 
   res.status(200).json(new ApiResponse(200, { comments: withStatus }));
 });
 
 const deleteComment = asyncHandler(async (req, res) => {
   const { commentId } = req.params;
-  const userId = req.customer._id;
+  const actor = actorFromRequest(req);
 
-  const comment = await CommentModel.findOne({ _id: commentId, user: userId });
-  if (!comment) throw new ApiError(404, "Comment not found or not yours");
+  const comment = await CommentModel.findById(commentId);
+  if (!comment || !ownsComment(comment, actor)) throw new ApiError(404, "Comment not found or not yours");
 
   await CommentModel.deleteOne({ _id: commentId });
   await ProductModel.findByIdAndUpdate(comment.product, { $inc: { commentCount: -1 } });
@@ -194,35 +246,39 @@ const deleteComment = asyncHandler(async (req, res) => {
 const editComment = asyncHandler(async (req, res) => {
   const { commentId } = req.params;
   const { text } = req.body;
-  const userId = req.customer._id;
+  const actor = actorFromRequest(req);
 
   if (!text || !text.trim()) throw new ApiError(400, "Comment text cannot be empty");
 
-  const comment = await CommentModel.findOne({ _id: commentId, user: userId });
-  if (!comment) throw new ApiError(404, "Comment not found or not yours");
+  const comment = await CommentModel.findById(commentId);
+  if (!comment || !ownsComment(comment, actor)) throw new ApiError(404, "Comment not found or not yours");
 
   comment.text = text.trim();
   await comment.save();
 
-  const updated = await CommentModel.findById(commentId).populate('user', 'name profileImage');
+  const updated = await presentComment(comment, actor);
   res.status(200).json(new ApiResponse(200, { comment: updated }, "Comment updated"));
 });
 
 const likeComment = asyncHandler(async (req, res) => {
   const { commentId } = req.body;
-  const userId = req.customer._id;
+  const actor = actorFromRequest(req);
 
   const comment = await CommentModel.findById(commentId);
   if (!comment) throw new ApiError(404, "Comment not found");
 
-  const idx = comment.likedBy.findIndex((id) => id.toString() === userId.toString());
+  const idx = comment.likedByActors.findIndex((entry) => entry.actorId === actor.id && entry.actorType === actor.type);
+  const legacyIdx = actor.type === 'customer'
+    ? comment.likedBy.findIndex((id) => id.toString() === actor.id)
+    : -1;
   let isLiked;
-  if (idx > -1) {
-    comment.likedBy.splice(idx, 1);
+  if (idx > -1 || legacyIdx > -1) {
+    if (idx > -1) comment.likedByActors.splice(idx, 1);
+    if (legacyIdx > -1) comment.likedBy.splice(legacyIdx, 1);
     comment.likeCount = Math.max(0, comment.likeCount - 1);
     isLiked = false;
   } else {
-    comment.likedBy.push(userId);
+    comment.likedByActors.push({ actorId: actor.id, actorType: actor.type });
     comment.likeCount += 1;
     isLiked = true;
   }

@@ -1,6 +1,6 @@
 import React from 'react'
 import api from '../../api/axios'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import CommentsModal from '../../components/CommentsModal'
 import BottomNav from '../../components/BottomNav'
 
@@ -84,6 +84,8 @@ const Home = () => {
   const videoRefs = React.useRef(new Map())
   const [isCommentsOpen, setIsCommentsOpen] = React.useState(false)
   const [selectedReelId, setSelectedReelId] = React.useState(null)
+  const location = useLocation()
+  const navigate = useNavigate()
 
   React.useEffect(() => {
     const observer = new IntersectionObserver(
@@ -102,6 +104,13 @@ const Home = () => {
     observedVideos.forEach((video) => observer.observe(video))
     return () => { observedVideos.forEach((video) => observer.unobserve(video)) }
   }, [videos])
+
+  React.useEffect(() => {
+    const reelId = location.state?.reelId
+    if (!reelId || videos.length === 0) return
+    document.querySelector(`[data-reel-id="${CSS.escape(reelId)}"]`)?.scrollIntoView({ behavior: 'smooth' })
+    navigate(location.pathname, { replace: true, state: null })
+  }, [location.pathname, location.state, navigate, videos])
 
 
   const setVideoRef = (id) => (el) => {
@@ -177,8 +186,6 @@ const Home = () => {
     }
   }
 
-  const navigate = useNavigate()
-
   const toggleSave = async (foodId) => {
     const prevSaved = new Set(savedIds)
     const alreadySaved = prevSaved.has(foodId)
@@ -228,7 +235,7 @@ const Home = () => {
     <div className="reels-shell">
       <div className="reels-list">
         {videos.map((reel) => (
-          <section className="reel-item" key={reel._id}>
+          <section className="reel-item" key={reel._id} data-reel-id={reel._id}>
             <video
               src={reel.videoUrl || reel.video}
               ref={setVideoRef(reel._id)}

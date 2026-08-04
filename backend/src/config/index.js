@@ -22,6 +22,30 @@ const config = {
   imagekitUrlEndpoint: required("IMAGEKIT_URL_ENDPOINT"),
 
   frontendUrl: optional("FRONTEND_URL", "http://localhost:5173"),
+
+  // MongoDB remains the default. Set AUTH_DATABASE=mysql to use SQL credentials
+  // while retaining MongoDB mirror records for domain relationships.
+  authDatabase: optional("AUTH_DATABASE", "mongodb").toLowerCase(),
+  mysql: {
+    host: optional("MYSQL_HOST"),
+    port: Number(optional("MYSQL_PORT", "3306")),
+    user: optional("MYSQL_USER"),
+    password: optional("MYSQL_PASSWORD"),
+    database: optional("MYSQL_DATABASE"),
+    connectionLimit: Number(optional("MYSQL_CONNECTION_LIMIT", "10")),
+  },
 };
+
+if (!['mongodb', 'mysql'].includes(config.authDatabase)) {
+  throw new Error('AUTH_DATABASE must be either mongodb or mysql');
+}
+
+if (config.authDatabase === 'mysql') {
+  for (const [key, value] of Object.entries(config.mysql)) {
+    if (key !== 'port' && key !== 'connectionLimit' && !value) {
+      throw new Error(`Missing required MySQL configuration: ${key}`);
+    }
+  }
+}
 
 module.exports = config;

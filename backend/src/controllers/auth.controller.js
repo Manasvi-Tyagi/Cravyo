@@ -6,6 +6,7 @@ const config = require('../config');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
+const AccountService = require('../services/account.service');
 
 const COOKIE_OPTS = {
   httpOnly: true,
@@ -32,10 +33,10 @@ const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
   if (!name || !email || !password) throw new ApiError(400, "name, email and password are required");
 
-  if (await UserModel.findOne({ email })) throw new ApiError(409, "User already exists");
+  if (await AccountService.findByEmail('customer', email)) throw new ApiError(409, "User already exists");
 
   const hashedPassword = await bcrypt.hash(password, 10);
-  const user = await UserModel.create({ name, email, password: hashedPassword });
+  const user = await AccountService.create('customer', { name, email, password: hashedPassword });
 
   const { accessToken, refreshToken } = issueTokens({ id: user._id, role: 'customer' });
   setAuthCookies(res, accessToken, refreshToken);
@@ -47,8 +48,10 @@ const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) throw new ApiError(400, "email and password are required");
 
-  const user = await UserModel.findOne({ email });
-  if (!user || !(await bcrypt.compare(password, user.password))) {
+  const account = await AccountService.findByEmail('customer', email);
+  if (!account) throw new ApiError(401, "Invalid email or password");
+  const { mongoAccount: user, password: passwordHash } = await AccountService.credentialsFor(account);
+  if (!(await bcrypt.compare(password, passwordHash))) {
     throw new ApiError(401, "Invalid email or password");
   }
 
@@ -77,10 +80,10 @@ const registerMerchant = asyncHandler(async (req, res) => {
   const { name, restaurantName, phone, address, email, password } = req.body;
   if (!name || !email || !password) throw new ApiError(400, "name, email and password are required");
 
-  if (await MerchantModel.findOne({ email })) throw new ApiError(409, "Merchant already exists");
+  if (await AccountService.findByEmail('merchant', email)) throw new ApiError(409, "Merchant already exists");
 
   const hashedPassword = await bcrypt.hash(password, 10);
-  const merchant = await MerchantModel.create({ name, restaurantName, phone, address, email, password: hashedPassword });
+  const merchant = await AccountService.create('merchant', { name, restaurantName, phone, address, email, password: hashedPassword });
 
   const { accessToken, refreshToken } = issueTokens({ id: merchant._id, role: 'merchant' });
   setAuthCookies(res, accessToken, refreshToken);
@@ -92,8 +95,10 @@ const loginMerchant = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) throw new ApiError(400, "email and password are required");
 
-  const merchant = await MerchantModel.findOne({ email });
-  if (!merchant || !(await bcrypt.compare(password, merchant.password))) {
+  const account = await AccountService.findByEmail('merchant', email);
+  if (!account) throw new ApiError(401, "Invalid email or password");
+  const { mongoAccount: merchant, password: passwordHash } = await AccountService.credentialsFor(account);
+  if (!(await bcrypt.compare(password, passwordHash))) {
     throw new ApiError(401, "Invalid email or password");
   }
 

@@ -9,16 +9,6 @@ const LS_KEYS = {
   liked: 'likedFoodIds',
 }
 
-function safeLoadIdSet(key) {
-  try {
-    const raw = localStorage.getItem(key)
-    const arr = raw ? JSON.parse(raw) : []
-    return new Set(Array.isArray(arr) ? arr : [])
-  } catch {
-    return new Set()
-  }
-}
-
 function HeartIcon({ filled }) {
   return (
     <svg className="action-svg" viewBox="0 0 24 24" aria-hidden="true">

@@ -454,6 +454,21 @@ Matching Food Reels
 
 # ⚙️ Environment Variables
 
+Use `backend/.env.example` and `frontend/.env.example` as configuration
+templates. MongoDB authentication is the default. For the optional hybrid
+MySQL authentication store, set `AUTH_DATABASE=mysql`, configure `MYSQL_*`,
+then run these commands from `backend`:
+
+```bash
+npm run db:migrate:mysql
+npm run db:migrate:accounts
+```
+
+The first command creates the SQL schema. The second copies existing customer
+and merchant credentials into MySQL while preserving MongoDB records used by
+products, carts, orders, likes, saves, and comments. Back up both databases
+before migrating production data.
+
 Create a `.env` file inside the backend folder.
 
 ```env

@@ -18,7 +18,9 @@ const userSchema = new mongoose.Schema({
   profileImage: {
     type: String,
     default: ''
-  }
+  },
+  authProvider: { type: String, enum: ['mongodb', 'mysql'], default: 'mongodb' },
+  externalAuthId: { type: String, sparse: true }
 },
 {
   timestamps: true

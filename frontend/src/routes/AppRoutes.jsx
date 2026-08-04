@@ -5,6 +5,7 @@ import UserLogin from '../pages/auth/UserLogin.jsx'
 import FoodPartnerRegister from '../pages/auth/FoodPartnerRegister.jsx'
 import FoodPartnerLogin from '../pages/auth/FoodPartnerLogin.jsx'
 import Home from '../pages/general/home.jsx'
+import Search from '../pages/general/Search.jsx'
 import Saved from '../pages/general/Saved.jsx'
 import Cart from '../pages/general/Cart.jsx'
 import Orders from '../pages/general/Orders.jsx'
@@ -18,6 +19,7 @@ function AppRoutes() {
     <Routes>
       {/* Customer routes */}
       <Route path="/" element={<Home />} />
+      <Route path="/search" element={<Search />} />
       <Route path="/saved" element={<Saved />} />
       <Route path="/cart" element={<Cart />} />
       <Route path="/orders" element={<Orders />} />
