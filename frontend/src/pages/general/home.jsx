@@ -84,8 +84,35 @@ const Home = () => {
   const videoRefs = React.useRef(new Map())
   const [isCommentsOpen, setIsCommentsOpen] = React.useState(false)
   const [selectedReelId, setSelectedReelId] = React.useState(null)
+  const [page, setPage] = React.useState(1)
+  const [hasMore, setHasMore] = React.useState(true)
+  const [isLoadingMore, setIsLoadingMore] = React.useState(false)
+  const loadMoreRef = React.useRef(null)
+  const requestInFlightRef = React.useRef(false)
   const location = useLocation()
   const navigate = useNavigate()
+
+  const fetchFeedPage = React.useCallback(async (requestedPage, replace = false) => {
+    if (requestInFlightRef.current) return
+    requestInFlightRef.current = true
+    setIsLoadingMore(true)
+    try {
+      const response = await api.get('/api/product/feed', { params: { page: requestedPage, limit: 10 } })
+      const products = response.data.data?.products || response.data.food || []
+      const pagination = response.data.data?.pagination
+      setVideos((current) => {
+        const combined = replace ? products : [...current, ...products]
+        return Array.from(new Map(combined.map((product) => [product._id, product])).values())
+      })
+      setPage(requestedPage)
+      setHasMore(pagination ? pagination.hasMore : products.length === 10)
+    } catch (error) {
+      console.error('Failed to load reels', error)
+    } finally {
+      requestInFlightRef.current = false
+      setIsLoadingMore(false)
+    }
+  }, [])
 
   React.useEffect(() => {
     const observer = new IntersectionObserver(
@@ -120,13 +147,7 @@ const Home = () => {
 
   React.useEffect(() => {
     const fetchData = async () => {
-      try {
-        const foodsRes = await api.get('/api/product/feed')
-        setVideos(foodsRes.data.data?.products || foodsRes.data.food || [])
-      } catch (err) {
-        console.error('Failed to load reels', err)
-        return
-      }
+      await fetchFeedPage(1, true)
       try {
         const [likedRes, savedRes] = await Promise.all([
           api.get('/api/product/liked'),
@@ -140,7 +161,20 @@ const Home = () => {
       }
     }
     fetchData()
-  }, [])
+  }, [fetchFeedPage])
+
+  React.useEffect(() => {
+    const sentinel = loadMoreRef.current
+    if (!sentinel || !hasMore) return undefined
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !requestInFlightRef.current) fetchFeedPage(page + 1)
+      },
+      { rootMargin: '500px 0px', threshold: 0.01 }
+    )
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [fetchFeedPage, hasMore, page])
 
   const handleCommentAdded = (foodId, increment = 1) => {
     setVideos((prev) =>
@@ -314,6 +348,9 @@ const Home = () => {
             </div>
           </section>
         ))}
+        <div ref={loadMoreRef} className="feed-load-sentinel" aria-live="polite">
+          {isLoadingMore ? 'Loading more reels…' : !hasMore && videos.length > 0 ? 'You’re all caught up' : ''}
+        </div>
       </div>
       <BottomNav />
       <CommentsModal

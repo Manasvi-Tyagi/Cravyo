@@ -18,6 +18,7 @@ The project follows a hybrid database architecture where **MySQL** is used for s
 - Comment on Reels
 - Save Favorite Reels
 - Search Food & Restaurants
+- Redis-backed feed, liked, and saved caches
 - Logout
 
 ---
@@ -128,13 +129,15 @@ Used for document-based social media data.
 
 ## Search
 
-- Elasticsearch
+- Elasticsearch multi-field search across food, restaurant, and tag metadata
 
 ---
 
 ## Caching
 
-- Redis
+- Redis cache-aside reads for feeds, product details, liked reels, and saved reels
+- Write-through interaction/count state with mutation-driven invalidation
+- Scheduled MongoDB → Redis/Elasticsearch reconciliation for recovery from drift
 
 ---
 
@@ -395,6 +398,24 @@ Elasticsearch
 Matching Food Reels
 ```
 
+Search documents are written when products are created. A scheduled full
+reconciliation repairs missing/stale Elasticsearch documents and removes
+documents whose MongoDB source record no longer exists.
+
+---
+
+# ⚡ Cache and Consistency Flow
+
+MongoDB is the source of truth for products, likes, saves, and comments.
+Redis uses cache-aside reads for the feed, product detail, liked, and saved
+collections. Like/save mutations are committed to MongoDB first, then refresh
+Redis interaction/counter state and invalidate dependent cache entries.
+
+The `SYNC_CRON` job recalculates like/save counters from MongoDB, rebuilds Redis
+interaction state, invalidates derived caches, and replaces the Elasticsearch
+product index. The job has an in-process overlap guard and can also be run
+manually with `npm run infra:reconcile`.
+
 ---
 
 # 📡 REST APIs
@@ -491,7 +512,24 @@ IMAGEKIT_PRIVATE_KEY=
 IMAGEKIT_URL_ENDPOINT=
 
 ELASTICSEARCH_NODE=
+ELASTICSEARCH_API_KEY=
+ELASTICSEARCH_INDEX=cravyo-products
+
+CACHE_TTL_SECONDS=300
+SYNC_CRON=*/5 * * * *
+INFRASTRUCTURE_REQUIRED=true
 ```
+
+For local development, start MongoDB, MySQL, Redis, and Elasticsearch from the
+repository root:
+
+```bash
+docker compose up -d --wait
+```
+
+With `AUTH_DATABASE=mysql`, credentials are stored in MySQL. A MongoDB identity
+mirror holds the stable ObjectId used by products, carts, orders, likes, saves,
+and comments. MySQL schema creation runs automatically during backend startup.
 
 ---
 
@@ -520,6 +558,7 @@ Run the backend
 ```bash
 npm run dev
 ```
+
 
 ---
 

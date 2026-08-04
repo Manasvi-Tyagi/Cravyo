@@ -4,6 +4,8 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const config = require('./config');
 const errorHandler = require('./middlewares/errorHandler.middleware');
+const { isRedisAvailable } = require('./services/redis.service');
+const { isSearchAvailable } = require('./services/search.service');
 
 const app = express();
 
@@ -31,6 +33,16 @@ app.use('/api/food', require('./routes/product.routes'));
 app.use('/api/food-partner', require('./routes/merchant.routes'));
 
 app.get('/', (req, res) => res.send("Cravyo API is running"));
+app.get('/api/health', (req, res) => {
+  const dependencies = {
+    mongodb: require('mongoose').connection.readyState === 1,
+    redis: isRedisAvailable(),
+    elasticsearch: isSearchAvailable(),
+    mysql: config.authDatabase !== 'mysql' || Boolean(require('./db/mysql').getMySqlPool()),
+  };
+  const healthy = Object.values(dependencies).every(Boolean);
+  res.status(healthy ? 200 : 503).json({ success: healthy, dependencies });
+});
 
 // ── Centralized error handler (must be last) ──────────────────────────────────
 app.use(errorHandler);

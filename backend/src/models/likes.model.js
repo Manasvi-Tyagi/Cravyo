@@ -5,4 +5,6 @@ const likeSchema = new mongoose.Schema({
   product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
 }, { timestamps: true });
 
+likeSchema.index({ user: 1, product: 1 }, { unique: true });
+
 module.exports = mongoose.model('Like', likeSchema);

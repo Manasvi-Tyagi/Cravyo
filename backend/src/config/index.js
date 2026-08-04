@@ -23,6 +23,14 @@ const config = {
 
   frontendUrl: optional("FRONTEND_URL", "http://localhost:5173"),
 
+  redisUrl: optional("REDIS_URL"),
+  cacheTtlSeconds: Number(optional("CACHE_TTL_SECONDS", "300")),
+  elasticsearchNode: optional("ELASTICSEARCH_NODE"),
+  elasticsearchApiKey: optional("ELASTICSEARCH_API_KEY"),
+  elasticsearchIndex: optional("ELASTICSEARCH_INDEX", "cravyo-products"),
+  syncCron: optional("SYNC_CRON", "*/5 * * * *"),
+  infrastructureRequired: optional("INFRASTRUCTURE_REQUIRED", "false").toLowerCase() === "true",
+
   // MongoDB remains the default. Set AUTH_DATABASE=mysql to use SQL credentials
   // while retaining MongoDB mirror records for domain relationships.
   authDatabase: optional("AUTH_DATABASE", "mongodb").toLowerCase(),
@@ -33,6 +41,8 @@ const config = {
     password: optional("MYSQL_PASSWORD"),
     database: optional("MYSQL_DATABASE"),
     connectionLimit: Number(optional("MYSQL_CONNECTION_LIMIT", "10")),
+    ssl: optional("MYSQL_SSL", "false").toLowerCase() === "true",
+    sslRejectUnauthorized: optional("MYSQL_SSL_REJECT_UNAUTHORIZED", "true").toLowerCase() === "true",
   },
 };
 
@@ -41,11 +51,15 @@ if (!['mongodb', 'mysql'].includes(config.authDatabase)) {
 }
 
 if (config.authDatabase === 'mysql') {
-  for (const [key, value] of Object.entries(config.mysql)) {
-    if (key !== 'port' && key !== 'connectionLimit' && !value) {
+  for (const key of ['host', 'user', 'database']) {
+    if (!config.mysql[key]) {
       throw new Error(`Missing required MySQL configuration: ${key}`);
     }
   }
+}
+
+if (config.infrastructureRequired && (!config.redisUrl || !config.elasticsearchNode)) {
+  throw new Error('REDIS_URL and ELASTICSEARCH_NODE are required when INFRASTRUCTURE_REQUIRED=true');
 }
 
 module.exports = config;

@@ -14,16 +14,15 @@ async function findSqlByEmail(role, email) {
   return rows[0] || null;
 }
 
-async function createSqlAccount(role, values) {
-  const pool = getMySqlPool();
+async function createSqlAccount(role, values, connection = getMySqlPool()) {
   if (role === 'customer') {
-    const [result] = await pool.execute(
+    const [result] = await connection.execute(
       'INSERT INTO customers (name, email, password) VALUES (?, ?, ?)',
       [values.name, values.email.toLowerCase(), values.password],
     );
     return result.insertId;
   }
-  const [result] = await pool.execute(
+  const [result] = await connection.execute(
     'INSERT INTO merchants (name, restaurant_name, phone, address, email, password) VALUES (?, ?, ?, ?, ?, ?)',
     [values.name, values.restaurantName || null, values.phone || null, values.address || null, values.email.toLowerCase(), values.password],
   );
@@ -50,7 +49,7 @@ async function ensureMongoMirror(role, values, sqlId) {
   return Model.findOneAndUpdate(
     { email },
     { $set: update },
-    { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true },
+    { returnDocument: 'after', upsert: true, runValidators: true, setDefaultsOnInsert: true },
   );
 }
 
@@ -67,8 +66,19 @@ async function findByEmail(role, email) {
 
 async function create(role, values) {
   if (config.authDatabase === 'mongodb') return mongoModelFor(role).create(values);
-  const sqlId = await createSqlAccount(role, values);
-  return ensureMongoMirror(role, values, sqlId);
+  const connection = await getMySqlPool().getConnection();
+  try {
+    await connection.beginTransaction();
+    const sqlId = await createSqlAccount(role, values, connection);
+    const mirror = await ensureMongoMirror(role, values, sqlId);
+    await connection.commit();
+    return mirror;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 }
 
 async function credentialsFor(account) {

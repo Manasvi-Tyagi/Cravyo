@@ -5,4 +5,6 @@ const saveSchema = new mongoose.Schema({
   product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
 }, { timestamps: true });
 
+saveSchema.index({ user: 1, product: 1 }, { unique: true });
+
 module.exports = mongoose.model('Save', saveSchema);

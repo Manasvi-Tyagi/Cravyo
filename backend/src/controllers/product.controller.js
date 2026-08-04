@@ -16,6 +16,27 @@ const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
 const UserModel = require('../models/user.model');
 const MerchantModel = require('../models/merchant.model');
+const Cache = require('../services/redis.service');
+const Search = require('../services/search.service');
+
+const feedCacheKey = (page, limit, query = '') => `feed:${page}:${limit}:${query.toLowerCase()}`;
+const productCacheKey = (id) => `product:${id}`;
+const likedCacheKey = (userId) => `user:${userId}:liked`;
+const savedCacheKey = (userId) => `user:${userId}:saved`;
+const interactionCacheKey = (userId, productId) => `interaction:${userId}:${productId}`;
+
+async function setInteractionState(userId, productId, patch) {
+  const key = interactionCacheKey(userId, productId);
+  const current = await Cache.getJson(key) || {};
+  return Cache.setJson(key, { ...current, ...patch });
+}
+
+async function invalidateProductCaches(productId, userId, listType) {
+  await Promise.all([
+    Cache.deleteByPattern('feed:*'),
+    Cache.deleteKeys(productCacheKey(productId), listType === 'liked' ? likedCacheKey(userId) : savedCacheKey(userId)),
+  ]);
+}
 
 function actorFromRequest(req) {
   if (req.authActor) return req.authActor;
@@ -94,6 +115,9 @@ const createProduct = asyncHandler(async (req, res) => {
     merchant: req.merchant._id,
   });
 
+  const indexedProduct = await ProductModel.findById(product._id).populate('merchant', 'name restaurantName image');
+  await Promise.all([Search.indexProduct(indexedProduct), Cache.deleteByPattern('feed:*')]);
+
   res.status(201).json(new ApiResponse(201, product, "Product created successfully"));
 });
 
@@ -105,25 +129,35 @@ const getProducts = asyncHandler(async (req, res) => {
   const skip = (page - 1) * limit;
 
   const search = req.query.q?.trim();
-  const filter = search ? {
-    $or: [
-      { name: { $regex: search, $options: 'i' } },
-      { description: { $regex: search, $options: 'i' } },
-    ],
-  } : {};
+  const key = feedCacheKey(page, limit, search || '');
+  const cached = await Cache.getJson(key);
+  if (cached) return res.status(200).json(new ApiResponse(200, cached, 'Products loaded from cache'));
 
-  const products = await ProductModel.find(filter)
-    .populate('merchant', 'name restaurantName image')
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
+  let products;
+  let total;
+  if (search && Search.isSearchAvailable()) {
+    const result = await Search.searchProductIds(search, page, limit);
+    const rows = await ProductModel.find({ _id: { $in: result.ids } })
+      .populate('merchant', 'name restaurantName image');
+    const byId = new Map(rows.map((item) => [item._id.toString(), item]));
+    products = result.ids.map((id) => byId.get(id)).filter(Boolean);
+    total = result.total;
+  } else {
+    const filter = search ? {
+      $or: [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+      ],
+    } : {};
+    products = await ProductModel.find(filter)
+      .populate('merchant', 'name restaurantName image')
+      .sort({ createdAt: -1 }).skip(skip).limit(limit);
+    total = await ProductModel.countDocuments(filter);
+  }
 
-  const total = await ProductModel.countDocuments(filter);
-
-  res.status(200).json(new ApiResponse(200, {
-    products,
-    pagination: { page, limit, total, hasMore: skip + products.length < total },
-  }));
+  const payload = { products, pagination: { page, limit, total, hasMore: skip + products.length < total } };
+  await Cache.setJson(key, payload);
+  res.status(200).json(new ApiResponse(200, payload));
 });
 
 // ── LIKE ───────────────────────────────────────────────────────────────────────
@@ -135,16 +169,36 @@ const likeProduct = asyncHandler(async (req, res) => {
   const { productId } = req.body;
   if (!productId) throw new ApiError(400, "productId is required");
 
+  const product = await ProductModel.findById(productId);
+  if (!product) throw new ApiError(404, "Product not found");
+
   const existing = await LikeModel.findOne({ user: customer._id, product: productId });
   if (existing) {
     await LikeModel.deleteOne({ _id: existing._id });
-    await ProductModel.findByIdAndUpdate(productId, { $inc: { likeCount: -1 } });
-    return res.status(200).json(new ApiResponse(200, { liked: false }, "Product unliked"));
+    const updated = await ProductModel.findByIdAndUpdate(productId, [
+      { $set: { likeCount: { $max: [0, { $subtract: ['$likeCount', 1] }] } } },
+    ], { returnDocument: 'after' });
+    await Promise.all([
+      setInteractionState(customer._id, productId, { liked: false }),
+      Cache.setJson(`social:product:${productId}`, { likeCount: updated.likeCount, saveCount: updated.saveCount }),
+      invalidateProductCaches(productId, customer._id, 'liked'),
+    ]);
+    return res.status(200).json(new ApiResponse(200, { liked: false, likeCount: updated.likeCount }, "Product unliked"));
   }
 
-  await LikeModel.create({ user: customer._id, product: productId });
-  await ProductModel.findByIdAndUpdate(productId, { $inc: { likeCount: 1 } });
-  res.status(200).json(new ApiResponse(200, { liked: true }, "Product liked"));
+  try {
+    await LikeModel.create({ user: customer._id, product: productId });
+  } catch (error) {
+    if (error.code !== 11000) throw error;
+    return res.status(200).json(new ApiResponse(200, { liked: true, likeCount: product.likeCount }, "Product already liked"));
+  }
+  const updated = await ProductModel.findByIdAndUpdate(productId, { $inc: { likeCount: 1 } }, { returnDocument: 'after' });
+  await Promise.all([
+    setInteractionState(customer._id, productId, { liked: true }),
+    Cache.setJson(`social:product:${productId}`, { likeCount: updated.likeCount, saveCount: updated.saveCount }),
+    invalidateProductCaches(productId, customer._id, 'liked'),
+  ]);
+  res.status(200).json(new ApiResponse(200, { liked: true, likeCount: updated.likeCount }, "Product liked"));
 });
 
 // ── SAVE ───────────────────────────────────────────────────────────────────────
@@ -156,16 +210,36 @@ const saveProduct = asyncHandler(async (req, res) => {
   const { productId } = req.body;
   if (!productId) throw new ApiError(400, "productId is required");
 
+  const product = await ProductModel.findById(productId);
+  if (!product) throw new ApiError(404, "Product not found");
+
   const existing = await SaveModel.findOne({ user: customer._id, product: productId });
   if (existing) {
     await SaveModel.deleteOne({ _id: existing._id });
-    await ProductModel.findByIdAndUpdate(productId, { $inc: { saveCount: -1 } });
-    return res.status(200).json(new ApiResponse(200, { saved: false }, "Product unsaved"));
+    const updated = await ProductModel.findByIdAndUpdate(productId, [
+      { $set: { saveCount: { $max: [0, { $subtract: ['$saveCount', 1] }] } } },
+    ], { returnDocument: 'after' });
+    await Promise.all([
+      setInteractionState(customer._id, productId, { saved: false }),
+      Cache.setJson(`social:product:${productId}`, { likeCount: updated.likeCount, saveCount: updated.saveCount }),
+      invalidateProductCaches(productId, customer._id, 'saved'),
+    ]);
+    return res.status(200).json(new ApiResponse(200, { saved: false, saveCount: updated.saveCount }, "Product unsaved"));
   }
 
-  await SaveModel.create({ user: customer._id, product: productId });
-  await ProductModel.findByIdAndUpdate(productId, { $inc: { saveCount: 1 } });
-  res.status(200).json(new ApiResponse(200, { saved: true }, "Product saved"));
+  try {
+    await SaveModel.create({ user: customer._id, product: productId });
+  } catch (error) {
+    if (error.code !== 11000) throw error;
+    return res.status(200).json(new ApiResponse(200, { saved: true, saveCount: product.saveCount }, "Product already saved"));
+  }
+  const updated = await ProductModel.findByIdAndUpdate(productId, { $inc: { saveCount: 1 } }, { returnDocument: 'after' });
+  await Promise.all([
+    setInteractionState(customer._id, productId, { saved: true }),
+    Cache.setJson(`social:product:${productId}`, { likeCount: updated.likeCount, saveCount: updated.saveCount }),
+    invalidateProductCaches(productId, customer._id, 'saved'),
+  ]);
+  res.status(200).json(new ApiResponse(200, { saved: true, saveCount: updated.saveCount }, "Product saved"));
 });
 
 // ── LIKED / SAVED LISTS ────────────────────────────────────────────────────────
@@ -174,24 +248,36 @@ const getLikedProducts = asyncHandler(async (req, res) => {
   const customer = req.customer;
   if (!customer) throw new ApiError(401, "Not authenticated");
 
+  const key = likedCacheKey(customer._id);
+  const cached = await Cache.getJson(key);
+  if (cached) return res.status(200).json(new ApiResponse(200, cached, 'Liked products loaded from cache'));
+
   const likes = await LikeModel.find({ user: customer._id }).populate({
     path: 'product',
     populate: { path: 'merchant', select: 'name restaurantName image' },
   });
   const products = likes.map((l) => l.product).filter(Boolean);
-  res.status(200).json(new ApiResponse(200, { products }));
+  const payload = { products };
+  await Cache.setJson(key, payload);
+  res.status(200).json(new ApiResponse(200, payload));
 });
 
 const getSavedProducts = asyncHandler(async (req, res) => {
   const customer = req.customer;
   if (!customer) throw new ApiError(401, "Not authenticated");
 
+  const key = savedCacheKey(customer._id);
+  const cached = await Cache.getJson(key);
+  if (cached) return res.status(200).json(new ApiResponse(200, cached, 'Saved products loaded from cache'));
+
   const saves = await SaveModel.find({ user: customer._id }).populate({
     path: 'product',
     populate: { path: 'merchant', select: 'name restaurantName image' },
   });
   const products = saves.map((s) => s.product).filter(Boolean);
-  res.status(200).json(new ApiResponse(200, { products }));
+  const payload = { products };
+  await Cache.setJson(key, payload);
+  res.status(200).json(new ApiResponse(200, payload));
 });
 
 // ── COMMENTS ──────────────────────────────────────────────────────────────────
@@ -291,9 +377,12 @@ module.exports = {
   createProduct,
   getProducts,
   getProductById: asyncHandler(async (req, res) => {
+    const cached = await Cache.getJson(productCacheKey(req.params.id));
+    if (cached) return res.status(200).json(new ApiResponse(200, cached, 'Product loaded from cache'));
     const product = await ProductModel.findById(req.params.id)
       .populate('merchant', 'name restaurantName image');
     if (!product) throw new ApiError(404, "Product not found");
+    await Cache.setJson(productCacheKey(req.params.id), product);
     res.status(200).json(new ApiResponse(200, product));
   }),
   likeProduct,
