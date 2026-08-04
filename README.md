@@ -1,191 +1,538 @@
-# Cravyo
-# 🍽️ Online Reel-Style Food Ordering Application
+# 🍽️ Cravyo - Reel-Based Food Discovery Platform
 
-A modern food ordering platform inspired by Instagram Reels, where users discover food through short videos and explore food partners seamlessly.
+Cravyo is a full-stack food discovery platform inspired by Instagram Reels, designed to help users discover restaurants and dishes through engaging short-form videos. It enables customers to browse food reels, interact with content, and discover new restaurants, while allowing food partners to showcase their dishes by uploading short-form video content.
 
----
-
-## 🚀 Features
-
-### 🎥 Reel-Based Food Discovery
-
-* Full-screen vertical scrolling feed (like Instagram Reels)
-* Auto play / pause using Intersection Observer
-* Smooth scroll snapping experience
-
-### 🍔 Food Partner Features
-
-* Upload food items with video
-* Add title and description
-* Dedicated profile page
-* Grid view of all uploaded items
-
-### 👤 User Features
-
-* Browse food reels
-* Visit food partner profiles
-* Like food items
-* Clean and smooth UI experience
-
-### 🔐 Authentication
-
-* Separate login/register for:
-
-  * Food Partners
-  * Customers
-* Protected routes using middleware
+The project follows a hybrid database architecture where **MySQL** is used for structured authentication data and **MongoDB** is used for highly scalable social media content such as reels, likes, comments, and saved reels. This architecture combines the strengths of relational and NoSQL databases to build a scalable and production-ready application.
 
 ---
 
-## 🛠️ Tech Stack
+# 🚀 Features
 
-### Frontend
+## 👤 Customer
 
-* React.js
-* React Router
-* Axios
-* Custom CSS
-
-### Backend
-
-* Node.js
-* Express.js
-* MongoDB + Mongoose
-* Multer
-
-### Storage
-
-* ImageKit (for video hosting)
+- Register & Login
+- Secure JWT Authentication
+- Browse Food Reels
+- Infinite Scroll Feed
+- Like Food Reels
+- Comment on Reels
+- Save Favorite Reels
+- Search Food & Restaurants
+- Logout
 
 ---
 
-## 📁 Project Structure
-## 📁 Project Structure
+## 🏪 Food Partner
+
+- Register & Login
+- Secure JWT Authentication
+- Upload Food Reels
+- Manage Restaurant Profile
+- Add Food Items
+- Logout
+
+---# 🏗️ System Architecture
+
+```text
+                       Client Layer
+┌──────────────────────────────────────────────────────────────┐
+│                     React.js Frontend                        │
+│  Login • Feed • Search • Upload • Likes • Comments • Saves  │
+└──────────────────────────────────────────────────────────────┘
+                           │
+                    HTTPS / REST APIs
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────┐
+│                   Express.js Backend API                     │
+│                                                              │
+│  Routes → Middleware → Controllers → Services → Models       │
+└──────────────────────────────────────────────────────────────┘
+                           │
+      ┌────────────────────┼─────────────────────┐
+      │                    │                     │
+      ▼                    ▼                     ▼
+┌─────────────-─┐   ┌────────────────┐   ┌─────────────────┐
+│Authentication │   │ Business Logic │   │External Services│
+│               │   │                │   │                 │
+│ JWT           │   │ Food Reels     │   │ ImageKit CDN    │
+│ Cookies       │   │ Likes          │   │ Elasticsearch   │
+│ bcrypt        │   │ Comments       │   │ Redis Cache     │
+│               │   │ Saved Reels    │   │                 │
+└──────┬────────┘   └────────┬───────┘   └────────┬────────┘
+       │                     │                    │
+       ▼                     ▼                    ▼
+┌──────────────┐     ┌────────────────────────────────────────┐
+│    MySQL     │     │               MongoDB                  │
+│              │     │                                        │
+│ Customers    │     │ Food Reels                             │
+│ FoodPartners │     │ Likes                                  │
+│              │     │ Comments                               │
+└──────────────┘     │ Saved Reels                            │
+                     └────────────────────────────────────────┘
+```
+---
+
+# 💻 Tech Stack
+
+## Frontend
+
+- React.js
+- React Router DOM
+- Axios
+- Tailwind CSS
+
+---
+
+## Backend
+
+- Node.js
+- Express.js
+
+---
+
+## Databases
+
+### MySQL
+
+Used for structured relational data.
+
+- Customer Authentication
+- Food Partner Authentication
+
+### MongoDB
+
+Used for document-based social media data.
+
+- Food Reels
+- Likes
+- Comments
+- Saved Reels
+
+---
+
+## Authentication
+
+- JWT (JSON Web Tokens)
+- HTTP Only Cookies
+- bcrypt Password Hashing
+
+---
+
+## Media Storage
+
+- Multer
+- ImageKit CDN
+
+---
+
+## Search
+
+- Elasticsearch
+
+---
+
+## Caching
+
+- Redis
+
+---
+
+# 📁 Project Structure
 
 ```
-cravyo/
+backend
 │
-├── backend/
-│   ├── src/
-│   │   ├── controllers/
-│   │   │   ├── food.controller.js
-│   │   │   ├── food-partner.controller.js
-│   │   │
-│   │   ├── models/
-│   │   │   ├── food.model.js
-│   │   │   ├── foodPartner.model.js
-│   │   │   ├── likes.model.js
-│   │   │   ├── save.model.js
-│   │   │
-│   │   ├── routes/
-│   │   │   ├── food.routes.js
-│   │   │   ├── food-partner.routes.js
-│   │   │
-│   │   ├── middlewares/
-│   │   │   ├── auth.middleware.js
-│   │   │
-│   │   ├── services/
-│   │   │   ├── storage.services.js
-│   │   │
-│   │   ├── app.js
-│   │
-│   ├── server.js
-│   ├── .env
-│   ├── package.json
+├── server.js
+├── package.json
 │
-├── frontend/
-│   ├── src/
-│   │   ├── pages/
-│   │   │   ├── auth/
-│   │   │   │   ├── FoodPartnerLogin.jsx
-│   │   │   │   ├── FoodPartnerRegister.jsx
-│   │   │   │   ├── UserLogin.jsx
-│   │   │   │   ├── UserRegister.jsx
-│   │   │   │
-│   │   │   ├── food-partner/
-│   │   │   │   ├── CreateFood.jsx
-│   │   │   │   ├── Profile.jsx
-│   │   │   │
-│   │   │   ├── general/
-│   │   │   │   ├── Home.jsx
-│   │   │
-│   │   ├── styles/
-│   │   │   ├── create-food.css
-│   │   │
-│   │   ├── App.jsx
-│   │   ├── main.jsx
-│   │
-│   ├── package.json
+├── src
 │
-├── README.md
+├── app.js
+│
+├── db
+│   ├── mongodb.js
+│   └── mysql.js
+│
+├── controllers
+│   ├── auth.controller.js
+│   ├── food.controller.js
+│   ├── foodPartner.controller.js
+│
+├── models
+│   ├── customer.model.js
+│   ├── foodPartner.model.js
+│   ├── food.model.js
+│   ├── likes.model.js
+│   ├── comments.model.js
+│   └── save.model.js
+│
+├── routes
+│   ├── auth.routes.js
+│   ├── food.routes.js
+│   └── foodPartner.routes.js
+│
+├── middlewares
+│   └── auth.middleware.js
+│
+├── services
+│   ├── imagekit.service.js
+│   ├── redis.service.js
+│   └── elasticsearch.service.js
+│
+├── utils
+│
+└── uploads
 ```
 
+---
+
+# 🗄️ Database Design
+
+## MySQL
+
+### customers
+
+| Column | Type |
+|---------|------|
+| id | INT |
+| name | VARCHAR(100) |
+| email | VARCHAR(255) |
+| password | VARCHAR(255) |
+| created_at | TIMESTAMP |
+| updated_at | TIMESTAMP |
 
 ---
 
-## ⚙️ Installation
+### food_partners
 
-### 1. Clone repository
-
-git clone https://github.com/Manasvi-Tyagi/cravyo.git
-cd cravyo
-
----
-
-### 2. Install dependencies
-
-Backend:
-cd backend
-npm install
-
-Frontend:
-cd frontend
-npm install
+| Column | Type |
+|---------|------|
+| id | INT |
+| name | VARCHAR(100) |
+| contact_name | VARCHAR(100) |
+| phone | VARCHAR(20) |
+| address | TEXT |
+| email | VARCHAR(255) |
+| password | VARCHAR(255) |
+| created_at | TIMESTAMP |
+| updated_at | TIMESTAMP |
 
 ---
 
-### 3. Setup environment variables
+## MongoDB Collections
 
-Create `.env` inside backend:
+```
+foods
+likes
+comments
+saved_reels
+```
 
+---
+
+# 🔐 Authentication Flow
+
+## Customer Registration
+
+```
+Customer
+      │
+      ▼
+Enter Details
+      │
+      ▼
+Validate Request
+      │
+      ▼
+Check Existing Email (MySQL)
+      │
+      ▼
+Hash Password using bcrypt
+      │
+      ▼
+Store Customer in MySQL
+      │
+      ▼
+Generate JWT
+      │
+      ▼
+Store JWT in HTTP Only Cookie
+      │
+      ▼
+Registration Successful
+```
+
+---
+
+## Customer Login
+
+```
+Customer
+      │
+      ▼
+Enter Email & Password
+      │
+      ▼
+Find Customer in MySQL
+      │
+      ▼
+Compare Password using bcrypt
+      │
+      ▼
+Generate JWT
+      │
+      ▼
+Store JWT in HTTP Only Cookie
+      │
+      ▼
+Login Successful
+```
+
+---
+
+# 🍔 Food Reel Upload Flow
+
+```
+Food Partner
+      │
+      ▼
+Upload Reel
+      │
+      ▼
+Multer
+      │
+      ▼
+ImageKit Upload
+      │
+      ▼
+Receive CDN URL
+      │
+      ▼
+Store Reel Metadata in MongoDB
+      │
+      ▼
+Food Reel Published
+```
+
+---
+
+# ❤️ Like Flow
+
+```
+Customer
+      │
+      ▼
+Click Like
+      │
+      ▼
+Verify JWT
+      │
+      ▼
+Store Like in MongoDB
+      │
+      ▼
+Increase Like Count
+      │
+      ▼
+Updated Feed
+```
+
+---
+
+# 💬 Comment Flow
+
+```
+Customer
+      │
+      ▼
+Write Comment
+      │
+      ▼
+Verify JWT
+      │
+      ▼
+Store Comment in MongoDB
+      │
+      ▼
+Return Updated Comments
+```
+
+---
+
+# ⭐ Save Reel Flow
+
+```
+Customer
+      │
+      ▼
+Save Reel
+      │
+      ▼
+Verify JWT
+      │
+      ▼
+Store Saved Reel in MongoDB
+      │
+      ▼
+Available in Saved Collection
+```
+
+---
+
+# 🔍 Search Flow
+
+```
+Customer
+      │
+      ▼
+Search Food / Restaurant
+      │
+      ▼
+Elasticsearch
+      │
+      ▼
+Matching Food Reels
+```
+
+---
+
+# 📡 REST APIs
+
+## Customer Authentication
+
+| Method | Endpoint | Description |
+|---------|----------|-------------|
+| POST | `/api/auth/register` | Register Customer |
+| POST | `/api/auth/login` | Login Customer |
+| POST | `/api/auth/logout` | Logout Customer |
+| GET | `/api/auth/me` | Get Current Customer |
+
+---
+
+## Food Partner Authentication
+
+| Method | Endpoint | Description |
+|---------|----------|-------------|
+| POST | `/api/partner/register` | Register Food Partner |
+| POST | `/api/partner/login` | Login Food Partner |
+| POST | `/api/partner/logout` | Logout Food Partner |
+| GET | `/api/partner/me` | Get Current Food Partner |
+
+---
+
+## Food APIs
+
+| Method | Endpoint |
+|---------|----------|
+| GET | `/api/foods` |
+| GET | `/api/foods/:id` |
+| POST | `/api/foods/upload` |
+| PUT | `/api/foods/:id` |
+| DELETE | `/api/foods/:id` |
+
+---
+
+## Like APIs
+
+| Method | Endpoint |
+|---------|----------|
+| POST | `/api/foods/:id/like` |
+| DELETE | `/api/foods/:id/like` |
+
+---
+
+## Comment APIs
+
+| Method | Endpoint |
+|---------|----------|
+| POST | `/api/comments` |
+| GET | `/api/comments/:foodId` |
+| DELETE | `/api/comments/:id` |
+
+---
+
+# ⚙️ Environment Variables
+
+Create a `.env` file inside the backend folder.
+
+```env
 PORT=1234
-MONGO_URI=your_mongodb_uri
-JWT_SECRET=your_secret
-IMAGEKIT_PUBLIC_KEY=your_key
-IMAGEKIT_PRIVATE_KEY=your_key
-IMAGEKIT_URL_ENDPOINT=your_url
+
+MONGODB_URI=
+
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_DATABASE=cravyo
+MYSQL_USER=root
+MYSQL_PASSWORD=
+
+JWT_SECRET=
+
+REDIS_URL=
+
+IMAGEKIT_PUBLIC_KEY=
+IMAGEKIT_PRIVATE_KEY=
+IMAGEKIT_URL_ENDPOINT=
+
+ELASTICSEARCH_NODE=
+```
 
 ---
 
-### 4. Run project
+# ⚡ Installation
 
-Backend:
+Clone the repository
+
+```bash
+git clone https://github.com/Manasvi-Tyagi/cravyo.git
+```
+
+Navigate to the project
+
+```bash
+cd cravyo
+```
+
+Install dependencies
+
+```bash
+npm install
+```
+
+Run the backend
+
+```bash
 npm run dev
-
-Frontend:
-npm run dev
+```
 
 ---
 
-## 📸 UI Highlights
+# 🔮 Future Enhancements
 
-* Full-screen reels experience
-* Instagram-style profile grid
-* Minimal and clean design
-* Smooth scrolling animations
+- Shopping Cart System
+- Food Ordering & Checkout
+- Order Tracking
+- Payment Gateway Integration (Stripe/Razorpay)
+- AI-powered Automatic Food Tagging
+- Personalized Food Recommendations
+- Restaurant Analytics Dashboard
+- Real-time Notifications
+- Ratings & Reviews
+- Follow Restaurants
+- User Profiles
+- Restaurant Verification
+- Trending & Recommended Reels
+- Admin Dashboard
+- Multi-language Support
+- Dark Mode
 
 ---
 
-## 💡 Future Improvements
+# 👨‍💻 Author
 
-* Comments system
-* Order placement
-* Save / bookmark feature
-* Recommendation system
-* Location-based discovery
+**Manasvi Tyagi**
 
----
+**Cravyo – Reel-Based Food Discovery Platform**
 
-## 👨‍💻 Author
-
-Manasvi Tyagi
+Built using **React.js, Node.js, Express.js, MySQL, MongoDB, Redis, Elasticsearch, ImageKit, JWT Authentication, and REST APIs.**
