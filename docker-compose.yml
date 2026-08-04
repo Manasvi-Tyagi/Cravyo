@@ -23,26 +23,26 @@ services:
       timeout: 5s
       retries: 20
 
-  redis:
-    image: redis:8-alpine
+  valkey:
+    image: valkey/valkey:8-alpine
     ports:
       - "6379:6379"
     volumes:
-      - redis-data:/data
+      - valkey-data:/data
 
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.1.0
+  opensearch:
+    image: opensearchproject/opensearch:3.2.0
     environment:
       discovery.type: single-node
-      xpack.security.enabled: "false"
-      ES_JAVA_OPTS: -Xms512m -Xmx512m
+      plugins.security.disabled: "true"
+      OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
     ports:
       - "9200:9200"
     volumes:
-      - elastic-data:/usr/share/elasticsearch/data
+      - opensearch-data:/usr/share/opensearch/data
 
 volumes:
   mongo-data:
   mysql-data:
-  redis-data:
-  elastic-data:
+  valkey-data:
+  opensearch-data:

@@ -36,9 +36,9 @@ app.get('/', (req, res) => res.send("Cravyo API is running"));
 app.get('/api/health', (req, res) => {
   const dependencies = {
     mongodb: require('mongoose').connection.readyState === 1,
-    redis: isRedisAvailable(),
-    elasticsearch: isSearchAvailable(),
-    mysql: config.authDatabase !== 'mysql' || Boolean(require('./db/mysql').getMySqlPool()),
+    valkey: isRedisAvailable(),
+    opensearch: isSearchAvailable(),
+    mysql: config.authDatabase !== 'mysql' || require('./db/mysql').isMySQLAvailable(),
   };
   const healthy = Object.values(dependencies).every(Boolean);
   res.status(healthy ? 200 : 503).json({ success: healthy, dependencies });

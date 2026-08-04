@@ -23,11 +23,13 @@ const config = {
 
   frontendUrl: optional("FRONTEND_URL", "http://localhost:5173"),
 
-  redisUrl: optional("REDIS_URL"),
+  valkeyUrl: optional("VALKEY_URL", optional("REDIS_URL")),
   cacheTtlSeconds: Number(optional("CACHE_TTL_SECONDS", "300")),
-  elasticsearchNode: optional("ELASTICSEARCH_NODE"),
-  elasticsearchApiKey: optional("ELASTICSEARCH_API_KEY"),
-  elasticsearchIndex: optional("ELASTICSEARCH_INDEX", "cravyo-products"),
+  opensearchNode: optional("OPENSEARCH_NODE", optional("ELASTICSEARCH_NODE")),
+  opensearchUsername: optional("OPENSEARCH_USERNAME"),
+  opensearchPassword: optional("OPENSEARCH_PASSWORD"),
+  opensearchIndex: optional("OPENSEARCH_INDEX", optional("ELASTICSEARCH_INDEX", "cravyo-products")),
+  opensearchSslRejectUnauthorized: optional("OPENSEARCH_SSL_REJECT_UNAUTHORIZED", "true").toLowerCase() === "true",
   syncCron: optional("SYNC_CRON", "*/5 * * * *"),
   infrastructureRequired: optional("INFRASTRUCTURE_REQUIRED", "false").toLowerCase() === "true",
 
@@ -58,8 +60,8 @@ if (config.authDatabase === 'mysql') {
   }
 }
 
-if (config.infrastructureRequired && (!config.redisUrl || !config.elasticsearchNode)) {
-  throw new Error('REDIS_URL and ELASTICSEARCH_NODE are required when INFRASTRUCTURE_REQUIRED=true');
+if (config.infrastructureRequired && (!config.valkeyUrl || !config.opensearchNode)) {
+  throw new Error('VALKEY_URL and OPENSEARCH_NODE are required when INFRASTRUCTURE_REQUIRED=true');
 }
 
 module.exports = config;

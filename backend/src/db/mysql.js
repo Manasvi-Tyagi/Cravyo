@@ -2,6 +2,7 @@ const mysql = require('mysql2/promise');
 const config = require('../config');
 
 let pool;
+let available = false;
 
 function getMySqlPool() {
   if (config.authDatabase !== 'mysql') return null;
@@ -20,10 +21,16 @@ function getMySqlPool() {
 async function connectMySQL() {
   const activePool = getMySqlPool();
   if (!activePool) return;
-  const connection = await activePool.getConnection();
-  connection.release();
-  await ensureMySqlSchema();
-  console.log('MySQL authentication store connected');
+  try {
+    const connection = await activePool.getConnection();
+    connection.release();
+    await ensureMySqlSchema();
+    available = true;
+    console.log('MySQL authentication store connected');
+  } catch (error) {
+    available = false;
+    throw error;
+  }
 }
 
 async function ensureMySqlSchema() {
@@ -57,6 +64,11 @@ async function ensureMySqlSchema() {
 async function closeMySQL() {
   if (pool) await pool.end();
   pool = undefined;
+  available = false;
 }
 
-module.exports = { connectMySQL, getMySqlPool, ensureMySqlSchema, closeMySQL };
+function isMySQLAvailable() {
+  return available;
+}
+
+module.exports = { connectMySQL, getMySqlPool, ensureMySqlSchema, closeMySQL, isMySQLAvailable };

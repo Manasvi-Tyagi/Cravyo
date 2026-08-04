@@ -18,7 +18,7 @@ The project follows a hybrid database architecture where **MySQL** is used for s
 - Comment on Reels
 - Save Favorite Reels
 - Search Food & Restaurants
-- Redis-backed feed, liked, and saved caches
+- Valkey-backed feed, liked, and saved caches
 - Logout
 
 ---
@@ -57,8 +57,8 @@ The project follows a hybrid database architecture where **MySQL** is used for s
 │Authentication │   │ Business Logic │   │External Services│
 │               │   │                │   │                 │
 │ JWT           │   │ Food Reels     │   │ ImageKit CDN    │
-│ Cookies       │   │ Likes          │   │ Elasticsearch   │
-│ bcrypt        │   │ Comments       │   │ Redis Cache     │
+│ Cookies       │   │ Likes          │   │ OpenSearch      │
+│ bcrypt        │   │ Comments       │   │ Valkey Cache    │
 │               │   │ Saved Reels    │   │                 │
 └──────┬────────┘   └────────┬───────┘   └────────┬────────┘
        │                     │                    │
@@ -129,15 +129,15 @@ Used for document-based social media data.
 
 ## Search
 
-- Elasticsearch multi-field search across food, restaurant, and tag metadata
+- OpenSearch multi-field search across food, restaurant, and tag metadata
 
 ---
 
 ## Caching
 
-- Redis cache-aside reads for feeds, product details, liked reels, and saved reels
+- Valkey cache-aside reads for feeds, product details, liked reels, and saved reels
 - Write-through interaction/count state with mutation-driven invalidation
-- Scheduled MongoDB → Redis/Elasticsearch reconciliation for recovery from drift
+- Scheduled MongoDB → Valkey/OpenSearch reconciliation for recovery from drift
 
 ---
 
@@ -180,8 +180,8 @@ backend
 │
 ├── services
 │   ├── imagekit.service.js
-│   ├── redis.service.js
-│   └── elasticsearch.service.js
+│   ├── redis.service.js (Valkey-compatible adapter)
+│   └── search.service.js (OpenSearch adapter)
 │
 ├── utils
 │
@@ -392,14 +392,14 @@ Customer
 Search Food / Restaurant
       │
       ▼
-Elasticsearch
+OpenSearch
       │
       ▼
 Matching Food Reels
 ```
 
 Search documents are written when products are created. A scheduled full
-reconciliation repairs missing/stale Elasticsearch documents and removes
+reconciliation repairs missing/stale OpenSearch documents and removes
 documents whose MongoDB source record no longer exists.
 
 ---
@@ -407,12 +407,12 @@ documents whose MongoDB source record no longer exists.
 # ⚡ Cache and Consistency Flow
 
 MongoDB is the source of truth for products, likes, saves, and comments.
-Redis uses cache-aside reads for the feed, product detail, liked, and saved
+Valkey uses cache-aside reads for the feed, product detail, liked, and saved
 collections. Like/save mutations are committed to MongoDB first, then refresh
-Redis interaction/counter state and invalidate dependent cache entries.
+Valkey interaction/counter state and invalidate dependent cache entries.
 
-The `SYNC_CRON` job recalculates like/save counters from MongoDB, rebuilds Redis
-interaction state, invalidates derived caches, and replaces the Elasticsearch
+The `SYNC_CRON` job recalculates like/save counters from MongoDB, rebuilds Valkey
+interaction state, invalidates derived caches, and replaces the OpenSearch
 product index. The job has an in-process overlap guard and can also be run
 manually with `npm run infra:reconcile`.
 
@@ -505,22 +505,24 @@ MYSQL_PASSWORD=
 
 JWT_SECRET=
 
-REDIS_URL=
+VALKEY_URL=
 
 IMAGEKIT_PUBLIC_KEY=
 IMAGEKIT_PRIVATE_KEY=
 IMAGEKIT_URL_ENDPOINT=
 
-ELASTICSEARCH_NODE=
-ELASTICSEARCH_API_KEY=
-ELASTICSEARCH_INDEX=cravyo-products
+OPENSEARCH_NODE=
+OPENSEARCH_USERNAME=
+OPENSEARCH_PASSWORD=
+OPENSEARCH_INDEX=cravyo-products
+OPENSEARCH_SSL_REJECT_UNAUTHORIZED=true
 
 CACHE_TTL_SECONDS=300
 SYNC_CRON=*/5 * * * *
 INFRASTRUCTURE_REQUIRED=true
 ```
 
-For local development, start MongoDB, MySQL, Redis, and Elasticsearch from the
+For local development, start MongoDB, MySQL, Valkey, and OpenSearch from the
 repository root:
 
 ```bash
@@ -589,4 +591,4 @@ npm run dev
 
 **Cravyo – Reel-Based Food Discovery Platform**
 
-Built using **React.js, Node.js, Express.js, MySQL, MongoDB, Redis, Elasticsearch, ImageKit, JWT Authentication, and REST APIs.**
+Built using **React.js, Node.js, Express.js, MySQL, MongoDB, Valkey, OpenSearch, ImageKit, JWT Authentication, and REST APIs.**

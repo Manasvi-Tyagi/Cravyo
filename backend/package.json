@@ -8,15 +8,16 @@
     "dev": "nodemon server.js",
     "db:migrate:mysql": "node scripts/migrate-mysql.js",
     "db:migrate:accounts": "node scripts/migrate-auth-to-mysql.js",
-    "infra:reconcile": "node scripts/reconcile-infrastructure.js"
+    "infra:reconcile": "node scripts/reconcile-infrastructure.js",
+    "infra:verify": "node scripts/verify-connections.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@elastic/elasticsearch": "^9.4.3",
     "@imagekit/nodejs": "^7.3.0",
+    "@opensearch-project/opensearch": "^3.6.0",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
