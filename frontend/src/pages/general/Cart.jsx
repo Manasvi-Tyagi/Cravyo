@@ -1,95 +1,114 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../api/axios'
 import BottomNav from '../../components/BottomNav'
+import CartItem from '../../components/CartItem'
+import CartSummary from '../../components/CartSummary'
+import { PageHeader, EmptyState, PageLevelError, LoadingSkeleton } from '../../components/ui'
 
 export default function Cart() {
-  const [cart, setCart] = useState({ items: [], totalAmount: 0 })
-  const [loading, setLoading] = useState(true)
-  const [address, setAddress] = useState('')
+  const [cart, setCart] = React.useState({ items: [], totalAmount: 0 })
+  const [loading, setLoading] = React.useState(true)
+  const [loadError, setLoadError] = React.useState(false)
+  const [address, setAddress] = React.useState('')
+  const [placing, setPlacing] = React.useState(false)
+  const [placeError, setPlaceError] = React.useState('')
+  const [pendingProductId, setPendingProductId] = React.useState(null)
   const navigate = useNavigate()
 
-  useEffect(() => {
+  const load = React.useCallback(() => {
+    setLoading(true)
+    setLoadError(false)
     api.get('/api/cart')
-      .then(res => setCart(res.data.data?.cart || { items: [], totalAmount: 0 }))
-      .catch(() => setCart({ items: [], totalAmount: 0 }))
+      .then((res) => setCart(res.data.data?.cart || { items: [], totalAmount: 0 }))
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false))
   }, [])
 
-  const remove = async (productId) => {
-    await api.delete(`/api/cart/item/${productId}`)
-    setCart(prev => {
-      const items = prev.items.filter(i => String(i.productId) !== productId)
-      return { ...prev, items, totalAmount: items.reduce((s, i) => s + i.price * i.quantity, 0) }
-    })
-  }
+  React.useEffect(() => { load() }, [load])
 
-  const placeOrder = async () => {
+  const recalc = (items) => ({ items, totalAmount: items.reduce((sum, i) => sum + i.price * i.quantity, 0) })
+
+  const updateQuantity = async (productId, quantity) => {
+    setPendingProductId(productId)
+    const prevCart = cart
+    setCart((prev) => recalc(prev.items.map((i) => (i.productId === productId ? { ...i, quantity } : i))))
     try {
-      await api.post('/api/orders/place', { deliveryAddress: address })
-      navigate('/orders')
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to place order')
+      await api.patch('/api/cart/update', { productId, quantity })
+    } catch {
+      setCart(prevCart)
+    } finally {
+      setPendingProductId(null)
     }
   }
 
-  if (loading) return <div className="page-loading">Loading cart...</div>
+  const removeItem = async (productId) => {
+    const prevCart = cart
+    setCart((prev) => recalc(prev.items.filter((i) => i.productId !== productId)))
+    try {
+      await api.delete(`/api/cart/item/${productId}`)
+    } catch {
+      setCart(prevCart)
+    }
+  }
+
+  const placeOrder = async () => {
+    setPlaceError('')
+    setPlacing(true)
+    try {
+      await api.post('/api/orders/place', { deliveryAddress: address.trim() })
+      navigate('/orders')
+    } catch (err) {
+      setPlaceError(err.response?.data?.message || "Order couldn't be placed. Please try again.")
+    } finally {
+      setPlacing(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="page-shell">
+        <PageHeader title="Cart" />
+        <LoadingSkeleton variant="list" count={3} />
+        <BottomNav />
+      </div>
+    )
+  }
 
   return (
     <div className="page-shell">
-      <div className="page-header">
-        <button className="page-back-btn" onClick={() => navigate(-1)} aria-label="Go back">←</button>
-        <div>
-          <h1 className="page-title">Your Cart</h1>
-          {cart.items.length > 0 && (
-            <p className="page-subtitle">{cart.items.length} item{cart.items.length !== 1 ? 's' : ''}</p>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Cart"
+        subtitle={cart.items.length > 0 ? `${cart.items.length} item${cart.items.length !== 1 ? 's' : ''}` : undefined}
+      />
 
-      {cart.items.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">🛒</div>
-          <h2 className="empty-state-title">Your cart is empty</h2>
-          <p className="empty-state-sub">Add some delicious items from the feed to get started.</p>
-        </div>
+      {loadError ? (
+        <PageLevelError message="Couldn't load your cart." onRetry={load} />
+      ) : cart.items.length === 0 ? (
+        <EmptyState icon="🛒" title="Your cart is empty" actionLabel="Browse Home" onAction={() => navigate('/')} />
       ) : (
-        <>
-          <div className="cart-summary-card">
-            {cart.items.map(item => (
-              <div key={item.productId} className="cart-item">
-                <div>
-                  <div className="cart-item-name">{item.name}</div>
-                  <div className="cart-item-meta">₹{item.price} × {item.quantity}</div>
-                </div>
-                <div className="cart-item-right">
-                  <span className="cart-item-total">₹{item.price * item.quantity}</span>
-                  <button
-                    className="cart-remove-btn"
-                    onClick={() => remove(item.productId)}
-                    aria-label="Remove item"
-                  >✕</button>
-                </div>
-              </div>
+        <div className="cart-layout">
+          <div className="cart-layout-items">
+            {cart.items.map((item) => (
+              <CartItem
+                key={item.productId}
+                item={item}
+                disabled={pendingProductId === item.productId}
+                onIncrease={() => updateQuantity(item.productId, item.quantity + 1)}
+                onDecrease={() => updateQuantity(item.productId, item.quantity - 1)}
+                onRemove={() => removeItem(item.productId)}
+              />
             ))}
-
-            <div className="order-total-row" style={{ marginTop: '0.75rem' }}>
-              <span className="order-total-label">Total</span>
-              <span className="order-total-amount">₹{cart.totalAmount}</span>
-            </div>
           </div>
-
-          <input
-            className="delivery-address-input"
-            value={address}
-            onChange={e => setAddress(e.target.value)}
-            placeholder="Delivery address (optional)"
+          <CartSummary
+            total={cart.totalAmount}
+            address={address}
+            onAddressChange={setAddress}
+            onPlaceOrder={placeOrder}
+            placing={placing}
+            error={placeError}
           />
-
-          <button className="place-order-btn" onClick={placeOrder}>
-            Place Order →
-          </button>
-        </>
+        </div>
       )}
       <BottomNav />
     </div>

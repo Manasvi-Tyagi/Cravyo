@@ -1,162 +1,61 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
-import api from '../api/axios'
+import { useFoodPartnerIdentity } from '../hooks/useFoodPartnerIdentity'
 
-export const FOOD_PARTNER_ID_KEY = 'merchantId'
+export { FOOD_PARTNER_ID_KEY } from '../hooks/useFoodPartnerIdentity'
 
-function HomeGlyph({ active }) {
+function HomeGlyph() {
   return (
     <svg className="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10.5Z"
-        stroke={active ? '#FF6B35' : 'currentColor'}
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-        fill={active ? 'rgba(255,107,53,0.15)' : 'none'}
-      />
+      <path d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
     </svg>
   )
 }
 
-function PlusGlyph({ active }) {
+function OrdersGlyph() {
   return (
     <svg className="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle
-        cx="12"
-        cy="12"
-        r="9"
-        stroke={active ? '#FF6B35' : 'currentColor'}
-        strokeWidth="1.8"
-      />
-      <path
-        d="M12 8v8M8 12h8"
-        stroke={active ? '#FF6B35' : 'currentColor'}
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
+      <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M8 9h8M8 13h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   )
 }
 
-function SavedGlyph({ active }) {
+function ProfileGlyph() {
   return (
     <svg className="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M6 4h12a1 1 0 0 1 1 1v16l-7-4-7 4V5a1 1 0 0 1 1-1Z"
-        stroke={active ? '#FF6B35' : 'currentColor'}
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-        fill={active ? 'rgba(255,107,53,0.15)' : 'none'}
-      />
+      <circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M5.5 19.5c.8-4 13.2-4 14 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   )
 }
 
-function ProfileGlyph({ active }) {
-  return (
-    <svg className="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle
-        cx="12"
-        cy="8"
-        r="3.5"
-        stroke={active ? '#FF6B35' : 'currentColor'}
-        strokeWidth="1.8"
-      />
-      <path
-        d="M5.5 19.5c.8-4 13.2-4 14 0"
-        stroke={active ? '#FF6B35' : 'currentColor'}
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
-
+/** Fixed dark bottom tab strip (mobile only — hidden on desktop, where FoodPartnerTopBar carries the nav links). */
 export default function FoodPartnerBottomNav() {
-  const [partnerId, setPartnerId] = React.useState(() => localStorage.getItem(FOOD_PARTNER_ID_KEY))
-
-  React.useEffect(() => {
-    api
-      .get('/api/auth/merchant/me')
-      .then((res) => {
-        const id = String(res.data.data?.id || res.data.merchant?.id)
-        localStorage.setItem(FOOD_PARTNER_ID_KEY, id)
-        setPartnerId(id)
-      })
-      .catch(() => {
-        localStorage.removeItem(FOOD_PARTNER_ID_KEY)
-        setPartnerId(null)
-      })
-  }, [])
-
-  const profileTo = partnerId ? `/food-partner/${partnerId}` : ''
+  const partner = useFoodPartnerIdentity()
+  const profileTo = partner ? `/food-partner/${partner.id}` : ''
+  const linkClass = ({ isActive }) => (isActive ? 'bottom-nav-link active' : 'bottom-nav-link')
 
   return (
-    <nav className="bottom-nav bottom-nav-partner" aria-label="Partner navigation">
-      <NavLink
-        to="/food-partner/home"
-        end
-        className={({ isActive }) =>
-          isActive ? 'bottom-nav-link active' : 'bottom-nav-link'
-        }
-      >
-        {({ isActive }) => (
-          <>
-            <HomeGlyph active={isActive} />
-            <span className="bottom-nav-label">home</span>
-          </>
-        )}
+    <nav className="bottom-nav bottom-nav-partner" aria-label="Food Partner navigation">
+      <NavLink to="/food-partner/home" end className={linkClass}>
+        <HomeGlyph />
+        <span className="bottom-nav-label">home</span>
       </NavLink>
 
-      <NavLink
-        to="/create-food"
-        className={({ isActive }) =>
-          isActive ? 'bottom-nav-link active' : 'bottom-nav-link'
-        }
-      >
-        {({ isActive }) => (
-          <>
-            <PlusGlyph active={isActive} />
-            <span className="bottom-nav-label">create</span>
-          </>
-        )}
+      <NavLink to="/merchant/orders" className={linkClass}>
+        <OrdersGlyph />
+        <span className="bottom-nav-label">orders</span>
       </NavLink>
 
-      <NavLink
-        to="/saved"
-        className={({ isActive }) =>
-          isActive ? 'bottom-nav-link active' : 'bottom-nav-link'
-        }
-      >
-        {({ isActive }) => (
-          <>
-            <SavedGlyph active={isActive} />
-            <span className="bottom-nav-label">saved</span>
-          </>
-        )}
-      </NavLink>
-
-      {partnerId ? (
-        <NavLink
-          to={profileTo}
-          end
-          className={({ isActive }) =>
-            isActive ? 'bottom-nav-link active' : 'bottom-nav-link'
-          }
-        >
-          {({ isActive }) => (
-            <>
-              <ProfileGlyph active={isActive} />
-              <span className="bottom-nav-label">profile</span>
-            </>
-          )}
+      {partner ? (
+        <NavLink to={profileTo} end className={linkClass}>
+          <ProfileGlyph />
+          <span className="bottom-nav-label">profile</span>
         </NavLink>
       ) : (
-        <span
-          className="bottom-nav-link bottom-nav-link--idle"
-          aria-label="profile (loading)"
-        >
-          <ProfileGlyph active={false} />
+        <span className="bottom-nav-link bottom-nav-link--idle" aria-label="profile (loading)">
+          <ProfileGlyph />
           <span className="bottom-nav-label">profile</span>
         </span>
       )}

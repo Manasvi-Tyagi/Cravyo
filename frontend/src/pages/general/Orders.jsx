@@ -1,86 +1,94 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../api/axios'
 import BottomNav from '../../components/BottomNav'
+import OrderCard from '../../components/OrderCard'
+import { PageHeader, EmptyState, PageLevelError, LoadingSkeleton, ConfirmDialog, useToast } from '../../components/ui'
+
+const STATUS = { LOADING: 'loading', READY: 'ready', UNAUTHENTICATED: 'unauthenticated', ERROR: 'error' }
 
 export default function Orders() {
-  const [orders, setOrders] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [status, setStatus] = React.useState(STATUS.LOADING)
+  const [orders, setOrders] = React.useState([])
+  const [pendingCancelId, setPendingCancelId] = React.useState(null)
+  const [cancelling, setCancelling] = React.useState(false)
+  const [orderErrors, setOrderErrors] = React.useState({})
   const navigate = useNavigate()
+  const { showToast } = useToast()
 
-  useEffect(() => {
+  const load = React.useCallback(() => {
+    setStatus(STATUS.LOADING)
     api.get('/api/orders/my')
-      .then(res => setOrders(res.data.data?.orders || []))
-      .catch(() => setOrders([]))
-      .finally(() => setLoading(false))
+      .then((res) => {
+        setOrders(res.data.data?.orders || [])
+        setStatus(STATUS.READY)
+      })
+      .catch((error) => setStatus(error.response?.status === 401 ? STATUS.UNAUTHENTICATED : STATUS.ERROR))
   }, [])
 
-  const cancel = async (orderId) => {
+  React.useEffect(() => { load() }, [load])
+
+  const confirmCancel = async () => {
+    const orderId = pendingCancelId
+    setCancelling(true)
+    setOrderErrors((prev) => ({ ...prev, [orderId]: '' }))
     try {
       const res = await api.patch(`/api/orders/${orderId}/cancel`)
-      setOrders(prev => prev.map(o => o._id === orderId ? res.data.data.order : o))
+      setOrders((prev) => prev.map((o) => (o._id === orderId ? res.data.data.order : o)))
+      showToast('Your order was cancelled')
+      setPendingCancelId(null)
     } catch (err) {
-      alert(err.response?.data?.message || 'Cannot cancel')
+      setOrderErrors((prev) => ({ ...prev, [orderId]: err.response?.data?.message || 'The order could not be updated. Try again.' }))
+      setPendingCancelId(null)
+    } finally {
+      setCancelling(false)
     }
   }
 
-  if (loading) return <div className="page-loading">Loading orders...</div>
-
   return (
     <div className="page-shell">
-      <div className="page-header">
-        <button className="page-back-btn" onClick={() => navigate(-1)} aria-label="Go back">←</button>
-        <div>
-          <h1 className="page-title">My Orders</h1>
-          {orders.length > 0 && (
-            <p className="page-subtitle">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
-          )}
-        </div>
-      </div>
+      <PageHeader title="My Orders" subtitle={status === STATUS.READY && orders.length > 0 ? `${orders.length} order${orders.length !== 1 ? 's' : ''}` : undefined} />
 
-      {orders.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">📦</div>
-          <h2 className="empty-state-title">No orders yet</h2>
-          <p className="empty-state-sub">Your order history will appear here once you place an order.</p>
-        </div>
-      ) : (
-        orders.map(order => (
-          <div key={order._id} className="order-card">
-            <div className="order-card-header">
-              <div>
-                <div className="order-merchant-name">
-                  {order.merchantId?.restaurantName || order.merchantId?.name || 'Restaurant'}
-                </div>
-                <div className="order-date">{new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
-              </div>
-              <span className={`status-badge ${order.status}`}>{order.status.replace('_', ' ')}</span>
-            </div>
+      {status === STATUS.LOADING && <LoadingSkeleton variant="list" count={3} />}
 
-            <div className="order-items">
-              {order.items.map(item => (
-                <div key={item.productId} className="order-item-row">
-                  <span className="order-item-name">{item.name}</span>
-                  <span className="order-item-qty">×{item.quantity}</span>
-                  <span className="order-item-price">₹{item.price * item.quantity}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="order-total-row">
-              <span className="order-total-label">Total</span>
-              <span className="order-total-amount">₹{order.totalAmount}</span>
-            </div>
-
-            {order.status === 'PLACED' && (
-              <button className="cancel-order-btn" onClick={() => cancel(order._id)}>
-                Cancel Order
-              </button>
-            )}
-          </div>
-        ))
+      {status === STATUS.UNAUTHENTICATED && (
+        <EmptyState round icon="👤" title="Sign in to see your orders" actionLabel="Sign in" onAction={() => navigate('/user/login')} />
       )}
+
+      {status === STATUS.ERROR && <PageLevelError message="Couldn't load your orders." onRetry={load} />}
+
+      {status === STATUS.READY && (
+        orders.length === 0 ? (
+          <EmptyState icon="📦" title="No orders yet" subtitle="Your order history will appear here once you place an order." actionLabel="Browse Home" onAction={() => navigate('/')} />
+        ) : (
+          <div className="order-list">
+            {orders.map((order) => (
+              <OrderCard
+                key={order._id}
+                order={order}
+                role="customer"
+                actionError={orderErrors[order._id]}
+                onRequestCancel={() => setPendingCancelId(order._id)}
+                cancelling={cancelling && pendingCancelId === order._id}
+              />
+            ))}
+          </div>
+        )
+      )}
+
       <BottomNav />
+
+      <ConfirmDialog
+        open={Boolean(pendingCancelId)}
+        title="Cancel this order?"
+        description="This can't be undone once confirmed."
+        confirmLabel="Cancel order"
+        cancelLabel="Keep order"
+        destructive
+        loading={cancelling}
+        onConfirm={confirmCancel}
+        onCancel={() => setPendingCancelId(null)}
+      />
     </div>
   )
 }

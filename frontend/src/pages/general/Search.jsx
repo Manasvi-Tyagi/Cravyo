@@ -2,75 +2,64 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../api/axios'
 import BottomNav from '../../components/BottomNav'
-
-function SearchIcon() {
-  return (
-    <svg className="search-bar-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M16 16l4.5 4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  )
-}
+import ProductGridTile from '../../components/ProductGridTile'
+import { SearchInput, EmptyState, PageLevelError, LoadingSkeleton } from '../../components/ui'
 
 export default function Search() {
   const [products, setProducts] = React.useState([])
   const [query, setQuery] = React.useState('')
   const [loading, setLoading] = React.useState(true)
+  const [error, setError] = React.useState(false)
   const navigate = useNavigate()
+
+  const load = React.useCallback((search) => {
+    setLoading(true)
+    setError(false)
+    return api.get('/api/product/feed', { params: { limit: 20, q: search.trim() || undefined } })
+      .then((res) => setProducts(res.data.data?.products || []))
+      .catch(() => setError(true))
+      .finally(() => setLoading(false))
+  }, [])
 
   React.useEffect(() => {
     let active = true
     const timer = window.setTimeout(() => {
-      setLoading(true)
-      api.get('/api/product/feed', { params: { limit: 20, q: query.trim() || undefined } })
-        .then((res) => { if (active) setProducts(res.data.data?.products || []) })
-        .catch((error) => console.error('Failed to load explore feed', error))
-        .finally(() => { if (active) setLoading(false) })
-    }, 250)
+      if (active) load(query)
+    }, 300)
     return () => { active = false; window.clearTimeout(timer) }
-  }, [query])
+  }, [query, load])
+
+  const openReel = (productId) => navigate('/', { state: { reelId: productId } })
 
   return (
     <div className="search-shell">
       <header className="search-header">
-        <label className="search-bar">
-          <SearchIcon />
-          <input
-            autoFocus
-            type="search"
-            className="search-input"
-            placeholder="Search food or restaurants"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </label>
+        <h1 className="search-title">Search</h1>
+        <SearchInput
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onClear={() => setQuery('')}
+          loading={loading}
+          placeholder="Search food or restaurants"
+          autoFocus
+        />
       </header>
 
       <main className="search-content">
         {loading ? (
-          <div className="search-status">Loading…</div>
+          <LoadingSkeleton variant="grid" count={6} />
+        ) : error ? (
+          <PageLevelError message="Search failed. Something went wrong loading results." onRetry={() => load(query)} />
         ) : products.length === 0 ? (
-          <div className="search-status">{query.trim() ? 'No results found' : 'No reels to explore yet'}</div>
+          <EmptyState
+            icon="🔍"
+            title="No dishes found"
+            subtitle="Try a different word from the dish name or description."
+          />
         ) : (
-          <div className="explore-grid">
+          <div className="product-grid">
             {products.map((product) => (
-              <button
-                key={product._id}
-                type="button"
-                className="explore-tile"
-                onClick={() => navigate('/', { state: { reelId: product._id } })}
-                aria-label={`Open ${product.name || 'food reel'}`}
-              >
-                <video
-                  src={product.videoUrl || product.video}
-                  className="explore-tile-video"
-                  muted
-                  playsInline
-                  preload="metadata"
-                />
-                <span className="explore-reel-badge" aria-hidden="true">▶</span>
-                <span className="explore-tile-label">{product.name}</span>
-              </button>
+              <ProductGridTile key={product._id} product={product} onClick={() => openReel(product._id)} />
             ))}
           </div>
         )}

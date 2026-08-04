@@ -1,5 +1,8 @@
 import React from 'react'
 import api from '../api/axios'
+import CommentRow from './comments/CommentRow'
+import CommentComposer from './comments/CommentComposer'
+import { ConfirmDialog, LoadingSkeleton, PageLevelError } from './ui'
 import '../styles/comments.css'
 
 function toViewModel(comment) {
@@ -7,8 +10,8 @@ function toViewModel(comment) {
     _id: comment._id,
     user: {
       id: comment.user?.id || comment.user?._id,
-      name: comment.user?.name || 'User',
-      avatar: comment.user?.profileImage || '👤',
+      name: comment.user?.name || 'Cravyo user',
+      avatar: comment.user?.profileImage || '',
       role: comment.user?.role,
     },
     text: comment.text,
@@ -19,133 +22,202 @@ function toViewModel(comment) {
   }
 }
 
-export default function CommentsModal({ isOpen, productId, foodId, onClose, onCommentAdded }) {
-  const itemId = productId || foodId
+export default function CommentsModal({ isOpen, productId, onClose, onCommentAdded }) {
   const [comments, setComments] = React.useState([])
-  const [inputValue, setInputValue] = React.useState('')
-  const [editingCommentId, setEditingCommentId] = React.useState(null)
-  const [editInputValue, setEditInputValue] = React.useState('')
-  const [error, setError] = React.useState('')
+  const [loading, setLoading] = React.useState(true)
+  const [loadError, setLoadError] = React.useState(false)
+  const [isAuthenticated, setIsAuthenticated] = React.useState(false)
+
+  const [composerValue, setComposerValue] = React.useState('')
   const [submitting, setSubmitting] = React.useState(false)
 
+  const [editingId, setEditingId] = React.useState(null)
+  const [editValue, setEditValue] = React.useState('')
+  const [savingEdit, setSavingEdit] = React.useState(false)
+
+  const [pendingDeleteId, setPendingDeleteId] = React.useState(null)
+  const [deleting, setDeleting] = React.useState(false)
+
+  const [actionError, setActionError] = React.useState('')
+
+  const dialogRef = React.useRef(null)
+  const triggerRef = React.useRef(null)
+
+  const loadComments = React.useCallback(() => {
+    if (!productId) return
+    setLoading(true)
+    setLoadError(false)
+    api.get(`/api/product/comment/${productId}`)
+      .then((response) => setComments((response.data.data?.comments || []).map(toViewModel)))
+      .catch(() => setLoadError(true))
+      .finally(() => setLoading(false))
+  }, [productId])
+
   React.useEffect(() => {
-    if (!isOpen || !itemId) return undefined
-    let active = true
-    api.get(`/api/product/comment/${itemId}`)
-      .then((response) => {
-        if (active) setComments((response.data.data?.comments || []).map(toViewModel))
-      })
-      .catch(() => { if (active) setError('Could not load comments.') })
-    return () => { active = false }
-  }, [isOpen, itemId])
+    if (!isOpen || !productId) return
+    triggerRef.current = document.activeElement
+    loadComments()
+    setComposerValue('')
+    setEditingId(null)
+    setActionError('')
+
+    let cancelled = false
+    api.get('/api/auth/user/me')
+      .then(() => { if (!cancelled) setIsAuthenticated(true) })
+      .catch(() => api.get('/api/auth/merchant/me')
+        .then(() => { if (!cancelled) setIsAuthenticated(true) })
+        .catch(() => { if (!cancelled) setIsAuthenticated(false) }))
+    return () => { cancelled = true }
+  }, [isOpen, productId, loadComments])
+
+  React.useEffect(() => {
+    if (!isOpen) return undefined
+    dialogRef.current?.focus()
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      triggerRef.current?.focus?.()
+    }
+  }, [isOpen, onClose])
+
+  if (!isOpen) return null
 
   const handlePostComment = async () => {
-    const text = inputValue.trim()
+    const text = composerValue.trim()
     if (!text || submitting) return
     setSubmitting(true)
-    setError('')
+    setActionError('')
     try {
-      const response = await api.post('/api/product/comment', { productId: itemId, text })
+      const response = await api.post('/api/product/comment', { productId, text })
       setComments((current) => [toViewModel(response.data.data.comment), ...current])
-      setInputValue('')
-      onCommentAdded?.(itemId)
+      setComposerValue('')
+      onCommentAdded?.(productId)
     } catch (requestError) {
-      setError(requestError.response?.data?.message || 'Sign in to post a comment.')
+      setActionError(requestError.response?.data?.message || 'Could not post your comment. Try again.')
     } finally {
       setSubmitting(false)
     }
   }
 
   const toggleLikeComment = async (commentId) => {
-    setError('')
+    setActionError('')
     try {
       const response = await api.post('/api/product/comment/like', { commentId })
-      setComments((current) => current.map((comment) => comment._id === commentId
-        ? { ...comment, isLiked: response.data.data.isLiked, likes: response.data.data.likeCount }
-        : comment))
+      setComments((current) => current.map((c) => (c._id === commentId
+        ? { ...c, isLiked: response.data.data.isLiked, likes: response.data.data.likeCount }
+        : c)))
     } catch (requestError) {
-      setError(requestError.response?.data?.message || 'Sign in to like comments.')
+      setActionError(requestError.response?.data?.message || 'Sign in to like comments.')
     }
   }
 
-  const saveEditedComment = async () => {
-    const text = editInputValue.trim()
+  const startEdit = (comment) => {
+    setEditingId(comment._id)
+    setEditValue(comment.text)
+  }
+
+  const saveEdit = async () => {
+    const text = editValue.trim()
     if (!text) return
+    setSavingEdit(true)
+    setActionError('')
     try {
-      const response = await api.patch(`/api/product/comment/${editingCommentId}`, { text })
-      setComments((current) => current.map((comment) => comment._id === editingCommentId
-        ? { ...comment, text: response.data.data.comment.text }
-        : comment))
-      setEditingCommentId(null)
-      setEditInputValue('')
+      const response = await api.patch(`/api/product/comment/${editingId}`, { text })
+      setComments((current) => current.map((c) => (c._id === editingId ? { ...c, text: response.data.data.comment.text } : c)))
+      setEditingId(null)
     } catch (requestError) {
-      setError(requestError.response?.data?.message || 'Could not edit this comment.')
+      setActionError(requestError.response?.data?.message || 'Could not save your edit.')
+    } finally {
+      setSavingEdit(false)
     }
   }
 
-  const deleteComment = async (commentId) => {
-    if (!window.confirm('Delete this comment?')) return
+  const confirmDelete = async () => {
+    setDeleting(true)
     try {
-      await api.delete(`/api/product/comment/${commentId}`)
-      setComments((current) => current.filter((comment) => comment._id !== commentId))
-      onCommentAdded?.(itemId, -1)
+      await api.delete(`/api/product/comment/${pendingDeleteId}`)
+      setComments((current) => current.filter((c) => c._id !== pendingDeleteId))
+      onCommentAdded?.(productId, -1)
+      setPendingDeleteId(null)
     } catch (requestError) {
-      setError(requestError.response?.data?.message || 'Could not delete this comment.')
+      setActionError(requestError.response?.data?.message || 'Could not delete this comment.')
+      setPendingDeleteId(null)
+    } finally {
+      setDeleting(false)
     }
   }
-
-  if (!isOpen) return null
 
   return (
     <>
       <button className="comments-overlay" onClick={onClose} aria-label="Close comments" type="button" />
-      <section className="comments-modal" role="dialog" aria-modal="true" aria-label="Comments">
+      <section
+        ref={dialogRef}
+        className="comments-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Comments"
+        tabIndex={-1}
+      >
         <div className="comments-header">
-          <h2>Comments</h2>
-          <button className="comments-close-btn" onClick={onClose} aria-label="Close" type="button">✕</button>
+          <h2>{loading ? 'Comments' : `${comments.length} comment${comments.length === 1 ? '' : 's'}`}</h2>
+          <button className="comments-close-btn" onClick={onClose} aria-label="Close comments" type="button">✕</button>
         </div>
-        <div className="comments-divider" />
+
         <div className="comments-list">
-          {comments.length === 0 ? (
-            <div className="comments-empty"><p>No comments yet</p><p className="comments-empty-sub">Be the first to comment!</p></div>
+          {loading ? (
+            <div style={{ padding: '14px 18px' }}>
+              <LoadingSkeleton variant="list" count={3} />
+            </div>
+          ) : loadError ? (
+            <PageLevelError message="Could not load comments." onRetry={loadComments} />
+          ) : comments.length === 0 ? (
+            <div className="comments-empty">
+              <p>No comments yet</p>
+              <p className="comments-empty-sub">Be the first to say something.</p>
+            </div>
           ) : comments.map((comment) => (
-            <article key={comment._id} className="comment-item">
-              <div className="comment-avatar">{comment.user.avatar}</div>
-              <div className="comment-content">
-                <div className="comment-header">
-                  <span className="comment-username">{comment.user.name}</span>
-                  {comment.user.role === 'merchant' && <span className="comment-role">merchant</span>}
-                  <span className="comment-timestamp">{comment.timestamp}</span>
-                  {comment.isOwn && (
-                    <div className="comment-actions">
-                      {editingCommentId === comment._id ? <>
-                        <button className="comment-action-btn save-btn" onClick={saveEditedComment} type="button">Save</button>
-                        <button className="comment-action-btn cancel-btn" onClick={() => setEditingCommentId(null)} type="button">Cancel</button>
-                      </> : <>
-                        <button className="comment-action-btn edit-btn" onClick={() => { setEditingCommentId(comment._id); setEditInputValue(comment.text) }} type="button">Edit</button>
-                        <button className="comment-action-btn delete-btn" onClick={() => deleteComment(comment._id)} type="button">Delete</button>
-                      </>}
-                    </div>
-                  )}
-                </div>
-                {editingCommentId === comment._id ? (
-                  <textarea className="comment-edit-input" value={editInputValue} onChange={(event) => setEditInputValue(event.target.value)} rows={2} />
-                ) : <p className="comment-text">{comment.text}</p>}
-                <div className="comment-meta"><span className="comment-likes">{comment.likes} likes</span></div>
-              </div>
-              <button className={`comment-like-btn ${comment.isLiked ? 'liked' : ''}`} onClick={() => toggleLikeComment(comment._id)} aria-label="Like comment" type="button">♥</button>
-            </article>
+            <CommentRow
+              key={comment._id}
+              comment={comment}
+              isEditing={editingId === comment._id}
+              editValue={editValue}
+              onEditValueChange={setEditValue}
+              onStartEdit={() => startEdit(comment)}
+              onSaveEdit={saveEdit}
+              onCancelEdit={() => setEditingId(null)}
+              savingEdit={savingEdit && editingId === comment._id}
+              onToggleLike={() => toggleLikeComment(comment._id)}
+              onRequestDelete={() => setPendingDeleteId(comment._id)}
+            />
           ))}
         </div>
+
         <div className="comments-input-section">
-          {error && <p className="comments-error" role="alert">{error}</p>}
-          <div className="comments-input-container">
-            <div className="input-avatar">👤</div>
-            <input className="comments-input" placeholder="Add a comment…" value={inputValue} onChange={(event) => setInputValue(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); handlePostComment() } }} />
-            <button className="comments-post-btn" onClick={handlePostComment} disabled={!inputValue.trim() || submitting} type="button">{submitting ? 'Posting…' : 'Post'}</button>
-          </div>
+          {actionError && <p className="comments-error" role="alert">{actionError}</p>}
+          <CommentComposer
+            isAuthenticated={isAuthenticated}
+            value={composerValue}
+            onChange={setComposerValue}
+            onSubmit={handlePostComment}
+            submitting={submitting}
+          />
         </div>
       </section>
+
+      <ConfirmDialog
+        open={Boolean(pendingDeleteId)}
+        title="Delete this comment?"
+        description="This can't be undone once confirmed."
+        confirmLabel="Delete"
+        cancelLabel="Keep comment"
+        destructive
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </>
   )
 }
