@@ -8,6 +8,7 @@ let running = false;
 
 async function countsByProduct(Model) {
   const rows = await Model.aggregate([
+    { $match: { product: { $ne: null } } },
     { $group: { _id: '$product', count: { $sum: 1 } } },
   ]);
   return new Map(rows.map((row) => [row._id.toString(), row.count]));

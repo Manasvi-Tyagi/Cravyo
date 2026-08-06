@@ -2,7 +2,6 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../api/axios'
 import FoodPartnerBottomNav from '../../components/FoodPartnerBottomNav'
-import FoodPartnerTopBar from '../../components/FoodPartnerTopBar'
 import OrderCard from '../../components/OrderCard'
 import { PageHeader, StatusBadge, Button, EmptyState, PageLevelError, LoadingSkeleton, ConfirmDialog } from '../../components/ui'
 import { nextStatusFor, NEXT_STATUS_LABEL } from '../../utils/orderStatus'
@@ -51,7 +50,6 @@ export default function MerchantOrders() {
 
   return (
     <>
-      <FoodPartnerTopBar />
       <div className="page-shell">
       <PageHeader title="Incoming orders" showBack={false} subtitle={status === STATUS.READY && orders.length > 0 ? `${orders.length} order${orders.length !== 1 ? 's' : ''} received` : undefined} />
 

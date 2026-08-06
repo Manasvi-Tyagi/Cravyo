@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../../api/axios'
 import BottomNav from '../../components/BottomNav'
 import OrderCard from '../../components/OrderCard'
-import { PageHeader, EmptyState, PageLevelError, LoadingSkeleton, ConfirmDialog, useToast } from '../../components/ui'
+import { PageHeader, Button, EmptyState, PageLevelError, LoadingSkeleton, ConfirmDialog, useToast } from '../../components/ui'
 
 const STATUS = { LOADING: 'loading', READY: 'ready', UNAUTHENTICATED: 'unauthenticated', ERROR: 'error' }
 
@@ -13,8 +13,15 @@ export default function Orders() {
   const [pendingCancelId, setPendingCancelId] = React.useState(null)
   const [cancelling, setCancelling] = React.useState(false)
   const [orderErrors, setOrderErrors] = React.useState({})
+  const [loggingOut, setLoggingOut] = React.useState(false)
   const navigate = useNavigate()
   const { showToast } = useToast()
+
+  const handleLogout = () => {
+    setLoggingOut(true)
+    api.get('/api/auth/user/logout')
+      .finally(() => navigate('/user/login'))
+  }
 
   const load = React.useCallback(() => {
     setStatus(STATUS.LOADING)
@@ -47,7 +54,15 @@ export default function Orders() {
 
   return (
     <div className="page-shell">
-      <PageHeader title="My Orders" subtitle={status === STATUS.READY && orders.length > 0 ? `${orders.length} order${orders.length !== 1 ? 's' : ''}` : undefined} />
+      <PageHeader
+        title="My Orders"
+        subtitle={status === STATUS.READY && orders.length > 0 ? `${orders.length} order${orders.length !== 1 ? 's' : ''}` : undefined}
+        rightAction={status === STATUS.READY ? (
+          <Button variant="secondary" size="sm" loading={loggingOut} loadingLabel="Logging out…" onClick={handleLogout}>
+            Log out
+          </Button>
+        ) : undefined}
+      />
 
       {status === STATUS.LOADING && <LoadingSkeleton variant="list" count={3} />}
 

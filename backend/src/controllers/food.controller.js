@@ -55,7 +55,7 @@ async function createFood(req, res) {
             ffmpeg(inputFilePath)
                 .outputOptions([
                     '-c:v libx264',
-                    '-preset medium',
+                    '-preset veryfast',
                     '-crf 28',
                     '-c:a aac',
                     '-b:a 128k',

@@ -17,11 +17,6 @@ const imagekit=new ImageKit({
 //and about buffer?
 //When using multer with memoryStorage, the uploaded file is stored in memory as a buffer. This means that instead of saving the file to disk, multer keeps the file data in memory, allowing us to access it directly in our controller. The buffer contains the raw binary data of the file, which can be used to upload the file to ImageKit or any other storage service without needing to read it from disk first. This approach can be more efficient for handling file uploads, especially when we want to process the file immediately after upload without needing to manage temporary files on the server.
 async function uploadFileToImageKit(file,fileName){
-    // const response=await imagekit.files.upload({
-    //     file:file,
-    //     fileName:fileName
-    // })
-    // return response;
     try {
         const base64File = file.toString("base64");
 

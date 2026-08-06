@@ -151,7 +151,7 @@ const getProducts = asyncHandler(async (req, res) => {
     } : {};
     products = await ProductModel.find(filter)
       .populate('merchant', 'name restaurantName image')
-      .sort({ createdAt: -1 }).skip(skip).limit(limit);
+      .sort({ createdAt: -1, _id: -1 }).skip(skip).limit(limit);
     total = await ProductModel.countDocuments(filter);
   }
 

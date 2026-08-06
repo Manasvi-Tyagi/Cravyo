@@ -11,7 +11,8 @@ const AccountService = require('../services/account.service');
 const COOKIE_OPTS = {
   httpOnly: true,
   secure: config.nodeEnv === 'production',
-  sameSite: 'lax',   // 'strict' blocks cross-port localhost (5173→1234)
+  // 'lax' for local dev (5173→1234 cross-port); 'none' in prod since Vercel/Render are cross-site.
+  sameSite: config.nodeEnv === 'production' ? 'none' : 'lax',
 };
 
 function issueTokens(payload) {

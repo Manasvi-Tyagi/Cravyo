@@ -2,10 +2,9 @@ import React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../../api/axios'
 import FoodPartnerBottomNav, { FOOD_PARTNER_ID_KEY } from '../../components/FoodPartnerBottomNav'
-import FoodPartnerTopBar from '../../components/FoodPartnerTopBar'
 import MerchantIdentityBlock from '../../components/MerchantIdentityBlock'
 import ProductGridTile from '../../components/ProductGridTile'
-import { IconButton, EmptyState, PageLevelError, LoadingSkeleton } from '../../components/ui'
+import { IconButton, Button, EmptyState, PageLevelError, LoadingSkeleton } from '../../components/ui'
 
 const STATUS = { LOADING: 'loading', READY: 'ready', NOT_FOUND: 'not-found', ERROR: 'error' }
 
@@ -16,6 +15,7 @@ export default function Profile() {
   const [partnerOwnProfile, setPartnerOwnProfile] = React.useState(false)
   const [merchant, setMerchant] = React.useState(null)
   const [products, setProducts] = React.useState([])
+  const [loggingOut, setLoggingOut] = React.useState(false)
 
   const load = React.useCallback(() => {
     setStatus(STATUS.LOADING)
@@ -43,11 +43,18 @@ export default function Profile() {
 
   const openReel = (productId) => navigate('/', { state: { reelId: productId } })
 
+  const handleLogout = () => {
+    setLoggingOut(true)
+    api.get('/api/auth/merchant/logout')
+      .finally(() => {
+        localStorage.removeItem(FOOD_PARTNER_ID_KEY)
+        navigate('/food-partner/login')
+      })
+  }
+
   return (
     <div className="profile-page" style={partnerOwnProfile ? { paddingBottom: 'var(--bottom-nav-height)' } : undefined}>
-      {partnerOwnProfile ? (
-        <FoodPartnerTopBar />
-      ) : (
+      {!partnerOwnProfile && (
         <div className="profile-topbar">
           <IconButton label="Back" onClick={() => navigate(-1)}>←</IconButton>
         </div>
@@ -85,7 +92,14 @@ export default function Profile() {
 
       {status === STATUS.READY && (
         <>
-          <MerchantIdentityBlock merchant={merchant} />
+          <MerchantIdentityBlock
+            merchant={merchant}
+            actionSlot={partnerOwnProfile && (
+              <Button variant="destructive" size="sm" loading={loggingOut} loadingLabel="Logging out…" onClick={handleLogout}>
+                Log out
+              </Button>
+            )}
+          />
           {products.length === 0 ? (
             <EmptyState icon="🍽️" title="No products uploaded yet" />
           ) : (

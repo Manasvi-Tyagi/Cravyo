@@ -645,6 +645,10 @@ button, input, textarea, select {
   align-items: center;
 }
 
+.profile-biz-info { flex: 1; min-width: 0; }
+
+.profile-identity-action { flex-shrink: 0; }
+
 .profile-avatar {
   width: 64px;
   height: 64px;
